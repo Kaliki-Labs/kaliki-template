@@ -19,7 +19,7 @@ paths:
           content:
             application/json:
               schema:
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
                 $ref: "#/components/schemas/SignupResponse"
 {%- else %}
                 $ref: "#/components/schemas/AuthResponse"
@@ -92,7 +92,7 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           description: Missing or invalid bearer token
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
   /auth/verify:
     post:
       operationId: verifyEmail
@@ -164,7 +164,7 @@ components:
           type: string
         role:
           type: string
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
         verified:
           type: boolean
 {%- endif %}
@@ -183,7 +183,7 @@ components:
           description: Long-lived, revocable refresh token. Rotated on each use.
         user:
           $ref: "#/components/schemas/User"
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
     SignupResponse:
       type: object
       required: [user, verification_token]
@@ -213,6 +213,10 @@ components:
         password:
           type: string
           minLength: 8
+          maxLength: 72
+          description: >-
+            8-72 characters with an uppercase letter, a lowercase letter,
+            a digit, and a symbol; no leading or trailing whitespace.
         name:
           type: string
     LoginRequest:
@@ -224,7 +228,7 @@ components:
           format: email
         password:
           type: string
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
     VerifyRequest:
       type: object
 {%- if verification_method == 'otp' %}
@@ -261,6 +265,10 @@ components:
         password:
           type: string
           minLength: 8
+          maxLength: 72
+          description: >-
+            8-72 characters with an uppercase letter, a lowercase letter,
+            a digit, and a symbol; no leading or trailing whitespace.
 {%- else %}
       required: [token, password]
       properties:
@@ -269,5 +277,9 @@ components:
         password:
           type: string
           minLength: 8
+          maxLength: 72
+          description: >-
+            8-72 characters with an uppercase letter, a lowercase letter,
+            a digit, and a symbol; no leading or trailing whitespace.
 {%- endif %}
 {%- endif %}

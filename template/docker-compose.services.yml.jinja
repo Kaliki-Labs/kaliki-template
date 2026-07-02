@@ -1,4 +1,4 @@
-# Dependencies only — postgres{% if caching == 'redis' %}, redis{% endif %}{% if auth == 'jwt-full' and mailer %}, mailpit{% endif %}{% if eventing == 'kafka-redpanda' %}, redpanda{% endif %}.
+# Dependencies only — postgres{% if caching == 'redis' %}, redis{% endif %}{% if auth == 'jwt' %}, mailpit{% endif %}{% if eventing == 'kafka-redpanda' %}, redpanda{% endif %}.
 #
 # Use this to run the backend on your host (go run ./cmd/server) against
 # containerized dependencies, instead of building the backend image:
@@ -35,7 +35,7 @@ services:
       timeout: 3s
       retries: 5
 {%- endif %}
-{%- if auth == 'jwt-full' and mailer %}
+{%- if auth == 'jwt' %}
 
   # Mailpit captures all outgoing mail locally. Web UI on http://localhost:8025
   mailpit:

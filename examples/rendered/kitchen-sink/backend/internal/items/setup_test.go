@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 	testDB = testsupport.Connect("test_items")
 
 	r, api := testsupport.NewRouter()
-	items.New(testDB.DB).Register(api)
+	items.New(testDB.Pool).Register(api)
 	router = r
 
 	os.Exit(m.Run())

@@ -45,7 +45,7 @@ func TestMain(m *testing.M) {
 
 	r, api := testsupport.NewRouter()
 	mailer = newRecordingMailer()
-	auth.New(testDB.DB, config.TokenConfig{Secret: "test-secret", ExpiryHours: 1}, mailer).Register(api)
+	auth.New(testDB.Pool, config.TokenConfig{Secret: "test-secret", ExpiryHours: 1}, mailer).Register(api)
 	router = r
 
 	os.Exit(m.Run())

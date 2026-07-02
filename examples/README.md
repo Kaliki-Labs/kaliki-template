@@ -6,29 +6,15 @@ Curated renderings of the template. Each profile is an answer set that guards a 
 
 ## Coverage matrix
 
-| profile | frontend | example | auth | mailer | verify | caching | eventing | payments | push | storage | agent |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| [`jwt-basic`](#jwt-basic) | ✓ | ✓ | jwt-basic | · | · | redis | · | · | · | · | ✓ |
-| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt-full | ✓ | otp | redis | · | · | · | · | ✓ |
-| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt-full | ✓ | token | redis | kafka-redpanda | razorpay | firebase | s3 | ✓ |
-| [`minimal`](#minimal) | · | · | · | · | · | · | · | · | · | · | ✓ |
+| profile | frontend | example | auth | verify | caching | eventing | payments | push | storage |
+|---|---|---|---|---|---|---|---|---|---|
+| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | redis | · | · | · | · |
+| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | redis | kafka-redpanda | razorpay | firebase | s3 |
+| [`minimal`](#minimal) | · | · | · | · | · | · | · | · | · |
 
 Legend: `✓` enabled · `·` off/none · otherwise the chosen value.
 
 ## Profiles
-
-### jwt-basic
-
-**JWT basic (signup + login)** — Guards the jwt-basic auth path: JWT issue/verify without verification or refresh-token machinery.
-
-Guards:
-- auth=jwt-basic (jwt.go + service.go, but NO service_tokens.go)
-- mailer/verification_method absent (gated behind auth=jwt-full)
-- example domain present alongside auth (sqlc generates both)
-
-Validated by: `go build`, `go vet`, `go test`, `flutter analyze`, `flutter test`
-
-Snapshot: [`examples/rendered/jwt-basic/`](rendered/jwt-basic)
 
 ### jwt-full-otp
 

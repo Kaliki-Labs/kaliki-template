@@ -14,6 +14,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/example/kitchen-sink-app/backend/internal/config"
 	"github.com/example/kitchen-sink-app/backend/internal/database"
 	"github.com/example/kitchen-sink-app/backend/internal/events"
@@ -41,16 +44,21 @@ func main() {
 	obs := observability.Init(cfg.Observability.ServiceName+"-workers", cfg.Observability.Endpoint)
 	defer obs.Shutdown()
 
-	db, err := database.Connect(ctx, cfg.Database.URL)
+	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer db.Close()
+	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTracerProvider(obs.TracerProvider()))
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer pool.Close()
 
 	publisher := events.NewPublisher(cfg.Kafka)
 	defer publisher.Close()
 
-	q := database.New(db.Pool)
+	q := database.New(pool)
 	log.Println("outbox relay started")
 
 	for {

@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/example/jwt-full-otp-app/backend/internal/config"
-	"github.com/example/jwt-full-otp-app/backend/internal/database"
+	"github.com/example/jwt-full-otp-app/backend/internal/migrate"
 	"github.com/example/jwt-full-otp-app/backend/internal/observability"
 	"github.com/example/jwt-full-otp-app/backend/internal/items"
 	"github.com/example/jwt-full-otp-app/backend/internal/auth"
@@ -39,17 +41,27 @@ func Run() {
 	obs := observability.Init(cfg.Observability.ServiceName, cfg.Observability.Endpoint)
 	defer obs.Shutdown()
 
-	db, err := database.Connect(ctx, cfg.Database.URL)
+	// Build the shared pgx pool and attach the otelpgx tracer to the same
+	// pipeline observability installed (no-op until an exporter is configured).
+	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer db.Close()
+	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTracerProvider(obs.TracerProvider()))
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("database: %v", err)
+	}
 
 	migrationsDir := os.Getenv("MIGRATE_PATH")
 	if migrationsDir == "" {
 		migrationsDir = "sql/schema"
 	}
-	if err := database.Migrate(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
+	if err := migrate.Up(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
 
@@ -66,8 +78,9 @@ func Run() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 	api := r.Group("/api/v1")
-	auth.New(db, cfg.Token, mail.New(cfg.Mail)).Register(api)
-	items.New(db).Register(api)
+	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail))
+	authSvc.Register(api)
+	items.New(pool).Register(api, authSvc.ScopeAuth())
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

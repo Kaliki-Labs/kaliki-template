@@ -20,7 +20,7 @@ WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now();
 
 -- name: RevokeRefreshToken :exec
 UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1;
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 
 -- name: VerifyUser :exec
 UPDATE users SET verified = true, updated_at = now() WHERE id = $1;

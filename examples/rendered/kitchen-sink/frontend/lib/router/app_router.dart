@@ -7,6 +7,7 @@ import '../auth/auth_controller.dart';
 import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
+import 'app_shell.dart';
 
 part 'app_router.g.dart';
 
@@ -36,9 +37,16 @@ GoRouter appRouter(Ref ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
+      // Authenticated routes share the AppShell (app bar + sign-out). Add new
+      // authed screens as GoRoute entries here.
+      ShellRoute(
+        builder: (context, state, child) => AppShell(child: child),
+        routes: [
+          GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+        ],
+      ),
     ],
   );
 }

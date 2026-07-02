@@ -2,6 +2,9 @@ package auth
 
 import (
 	"errors"
+{%- if auth == 'jwt' and verification_method == 'otp' %}
+	"slices"
+{%- endif %}
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -27,7 +30,7 @@ type Claims struct {
 	Role string `json:"role"`
 	jwt.RegisteredClaims
 }
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
 
 // verifyPurpose marks a token as a pending-verification credential (returned by
 // signup, redeemed alongside the OTP). It is NOT a session token: it carries no
@@ -59,10 +62,8 @@ func (t *TokenIssuer) ParseVerification(token string) (string, error) {
 	if err != nil || !parsed.Valid {
 		return "", errors.New("invalid token")
 	}
-	for _, aud := range claims.Audience {
-		if aud == verifyPurpose {
-			return claims.Subject, nil
-		}
+	if slices.Contains(claims.Audience, verifyPurpose) {
+		return claims.Subject, nil
 	}
 	return "", errors.New("invalid token")
 }
@@ -91,13 +92,11 @@ func (t *TokenIssuer) Parse(token string) (*Claims, error) {
 	if err != nil || !parsed.Valid {
 		return nil, errors.New("invalid token")
 	}
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
 	// Reject pending-verification tokens: they are not sessions and must never
 	// authenticate API calls (see IssueVerification).
-	for _, aud := range claims.Audience {
-		if aud == verifyPurpose {
-			return nil, errors.New("invalid token")
-		}
+	if slices.Contains(claims.Audience, verifyPurpose) {
+		return nil, errors.New("invalid token")
 	}
 {%- endif %}
 	return claims, nil

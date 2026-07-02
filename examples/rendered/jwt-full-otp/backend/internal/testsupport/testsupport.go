@@ -19,12 +19,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/example/jwt-full-otp-app/backend/internal/database"
+	"github.com/example/jwt-full-otp-app/backend/internal/migrate"
 )
 
 // TestDB is a per-package test database scoped to its own schema.
 type TestDB struct {
-	*database.DB
+	Pool   *pgxpool.Pool
 	Schema string
 }
 
@@ -59,10 +59,10 @@ func Connect(schema string) *TestDB {
 		panic("create test schema: " + err.Error())
 	}
 
-	if err := database.Migrate(ctx, DatabaseURL(), schema, "../../sql/schema"); err != nil {
+	if err := migrate.Up(ctx, DatabaseURL(), schema, "../../sql/schema"); err != nil {
 		panic("migrate test db: " + err.Error())
 	}
-	return &TestDB{DB: &database.DB{Pool: pool}, Schema: schema}
+	return &TestDB{Pool: pool, Schema: schema}
 }
 
 // NewRouter returns a gin engine in test mode with an /api/v1 group.

@@ -5,7 +5,7 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     name          TEXT NOT NULL DEFAULT '',
     role          TEXT NOT NULL DEFAULT 'user',
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
     verified      BOOLEAN NOT NULL DEFAULT false,
 {%- endif %}
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),

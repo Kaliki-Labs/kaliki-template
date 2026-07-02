@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/example/minimal-app/backend/internal/config"
-	"github.com/example/minimal-app/backend/internal/database"
 	"github.com/example/minimal-app/backend/internal/observability"
 )
 
@@ -34,20 +33,6 @@ func Run() {
 
 	obs := observability.Init(cfg.Observability.ServiceName, cfg.Observability.Endpoint)
 	defer obs.Shutdown()
-
-	db, err := database.Connect(ctx, cfg.Database.URL)
-	if err != nil {
-		log.Fatalf("database: %v", err)
-	}
-	defer db.Close()
-
-	migrationsDir := os.Getenv("MIGRATE_PATH")
-	if migrationsDir == "" {
-		migrationsDir = "sql/schema"
-	}
-	if err := database.Migrate(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
-		log.Fatalf("migrate: %v", err)
-	}
 
 	r := gin.Default()
 	r.Use(corsMiddleware())

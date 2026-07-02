@@ -17,6 +17,10 @@ paths:
     post:
       operationId: createItem
       tags: [items]
+{%- if auth == 'jwt' %}
+      security:
+        - bearerAuth: []
+{%- endif %}
       requestBody:
         required: true
         content:
@@ -51,9 +55,17 @@ paths:
         "404":
           description: Not found
 components:
+{%- if auth == 'jwt' %}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+{%- endif %}
   schemas:
     Item:
       type: object
+      required: [id, name, created_at]
       properties:
         id:
           type: string

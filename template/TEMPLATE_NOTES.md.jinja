@@ -48,7 +48,7 @@ customer app's client bundle and docs, adopt the split-spec pattern:
 This is documentation-only here. Note it hides endpoints from the bundle, it is
 **not** a substitute for authz.
 
-{% if auth == 'jwt-full' -%}
+{% if auth == 'jwt' -%}
 ## Authentication & transactional email
 
 Signup, login, email verification and password reset live in `internal/auth`,
@@ -76,11 +76,9 @@ implements exactly this flow: signup screen -> OTP screen -> home.
 
 - `smtp` — standard SMTP. Locally this points at **Mailpit** (web UI on
   http://localhost:8025) so you can read every email without sending anything.
-{%- if mailer %}
 - `ses` — AWS SES v2. In production set `MAIL_PROVIDER=ses` plus `SES_REGION`
   (credentials resolve from `SES_ACCESS_KEY_ID`/`SES_SECRET_ACCESS_KEY` or the
   default AWS chain — env, profile, or IAM role).
-{%- endif %}
 - anything else / empty — the **log transport**: the email is written to the
   server log instead of being sent. This is the safe default, so the app boots
   with zero email infrastructure and credentials stay observable in dev.
@@ -91,10 +89,10 @@ type by adding a template + a typed `Send*` method on the mailer.
 ### Local development
 
 ```sh
-docker compose -f docker-compose.services.yml up -d   # postgres{% if caching == 'redis' %} + redis{% endif %}{% if mailer %} + mailpit{% endif %}
+docker compose -f docker-compose.services.yml up -d   # postgres{% if caching == 'redis' %} + redis{% endif %} + mailpit
 cd backend && go run ./cmd/server
 ```
-{% if mailer %}Open http://localhost:8025 to read the verification / reset emails.{% endif %}
+Open http://localhost:8025 to read the verification / reset emails.
 {% endif %}
 ## Tier-2 modules
 
@@ -201,7 +199,7 @@ The Flutter app ships a working auth flow as a reference:
 - `lib/auth/auth_controller.dart` — Riverpod controller holding the current user
   (loads `/auth/me` on startup; `login` / `signup` / `logout`).
 - `lib/router/app_router.dart` — GoRouter with an auth redirect.
-- `lib/screens/` — login, signup,{% if auth == 'jwt-full' and verification_method == 'otp' %} OTP verification,{% endif %} home{% if include_example_domain %} (which renders the example `items` list){% endif %}.
+- `lib/screens/` — login, signup,{% if auth == 'jwt' and verification_method == 'otp' %} OTP verification,{% endif %} home{% if include_example_domain %} (which renders the example `items` list){% endif %}.
 - `lib/widgets/` — local building blocks (`AppButton`, `AppTextField`). There is
   intentionally **no shared_ui package**: extract one into its own repo only
   once a second app needs to share it.

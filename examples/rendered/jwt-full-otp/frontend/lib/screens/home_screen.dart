@@ -12,9 +12,10 @@ final itemsListProvider = FutureProvider.autoDispose<List<Item>>((ref) async {
   return result.items;
 });
 
-/// Authenticated landing screen. Shows the current user (loaded from /auth/me)
-/// and a sign-out action. Below it, a simple list backed by the
-/// example `items` domain demonstrates a full read/write round-trip.
+/// Authenticated landing screen, rendered inside AppShell (see
+/// router/app_shell.dart for the shared app bar + sign-out action). Below
+/// the status line, a simple list backed by the example `items` domain
+/// demonstrates a full read/write round-trip.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -22,37 +23,25 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).valueOrNull;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            // min when it is just the status line; the items list below needs
-            // Expanded, which requires the column to fill the available height.
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              const SizedBox(height: 24),
-              const Icon(Icons.check_circle_outline, size: 48),
-              const SizedBox(height: 16),
-              Text(
-                user == null ? 'Signed in' : 'Signed in as ${user.email}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              Expanded(child: _ItemsSection()),
-            ],
-          ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          // min when it is just the status line; the items list below needs
+          // Expanded, which requires the column to fill the available height.
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            const SizedBox(height: 24),
+            const Icon(Icons.check_circle_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              user == null ? 'Signed in' : 'Signed in as ${user.email}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            Expanded(child: _ItemsSection()),
+          ],
         ),
       ),
     );
@@ -83,7 +72,7 @@ class _ItemsSection extends ConsumerWidget {
                       for (final item in list)
                         ListTile(
                           leading: const Icon(Icons.label_outline),
-                          title: Text(item.name ?? '(unnamed)'),
+                          title: Text(item.name),
                         ),
                     ],
                   ),

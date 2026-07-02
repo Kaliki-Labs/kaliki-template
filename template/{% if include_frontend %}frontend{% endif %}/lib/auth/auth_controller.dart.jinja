@@ -4,7 +4,7 @@ import 'package:shared_api_client/export.dart';
 import '../api/rest_client_provider.dart';
 
 part 'auth_controller.g.dart';
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
 
 /// A signup awaiting OTP verification: the email plus the short-lived token
 /// returned by /auth/signup, submitted together with the emailed code.
@@ -52,7 +52,7 @@ class AuthController extends _$AuthController {
   Future<void> signup(String email, String password, String? name) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
       // Signup does not start a session. The backend emails a one-time code and
       // returns a verification token; stash both and route to the OTP screen.
       final resp = await ref.read(authClientProvider).signup(
@@ -71,7 +71,7 @@ class AuthController extends _$AuthController {
 {%- endif %}
     });
   }
-{%- if auth == 'jwt-full' and verification_method == 'otp' %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
 
   /// Submits the emailed OTP for the pending signup. On success the account is
   /// verified, a session is persisted, and the user is signed in.

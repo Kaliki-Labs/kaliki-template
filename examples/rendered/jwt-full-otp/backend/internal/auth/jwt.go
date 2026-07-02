@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -58,10 +59,8 @@ func (t *TokenIssuer) ParseVerification(token string) (string, error) {
 	if err != nil || !parsed.Valid {
 		return "", errors.New("invalid token")
 	}
-	for _, aud := range claims.Audience {
-		if aud == verifyPurpose {
-			return claims.Subject, nil
-		}
+	if slices.Contains(claims.Audience, verifyPurpose) {
+		return claims.Subject, nil
 	}
 	return "", errors.New("invalid token")
 }
@@ -91,10 +90,8 @@ func (t *TokenIssuer) Parse(token string) (*Claims, error) {
 	}
 	// Reject pending-verification tokens: they are not sessions and must never
 	// authenticate API calls (see IssueVerification).
-	for _, aud := range claims.Audience {
-		if aud == verifyPurpose {
-			return nil, errors.New("invalid token")
-		}
+	if slices.Contains(claims.Audience, verifyPurpose) {
+		return nil, errors.New("invalid token")
 	}
 	return claims, nil
 }

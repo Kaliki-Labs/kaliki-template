@@ -53,11 +53,11 @@ func (s *Service) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	if err := s.store.q.VerifyUser(c.Request.Context(), tok.UserID); err != nil {
+	if err := s.store.VerifyUser(c.Request.Context(), tok.UserID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not verify user"})
 		return
 	}
-	_ = s.store.q.MarkAuthTokenUsed(c.Request.Context(), tok.ID)
+	_ = s.store.MarkAuthTokenUsed(c.Request.Context(), tok.ID)
 
 	verifiedUser, err := s.store.GetUserByID(c.Request.Context(), tok.UserID)
 	if err != nil {
@@ -97,8 +97,8 @@ func (s *Service) ConfirmPasswordReset(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if len(body.Password) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 8 chars"})
+	if err := ValidatePassword(body.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -118,14 +118,11 @@ func (s *Service) ConfirmPasswordReset(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not hash password"})
 		return
 	}
-	if err := s.store.q.UpdateUserPassword(c.Request.Context(), database.UpdateUserPasswordParams{
-		ID:           tok.UserID,
-		PasswordHash: hash,
-	}); err != nil {
+	if err := s.store.UpdateUserPassword(c.Request.Context(), tok.UserID, hash); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not update password"})
 		return
 	}
-	_ = s.store.q.MarkAuthTokenUsed(c.Request.Context(), tok.ID)
+	_ = s.store.MarkAuthTokenUsed(c.Request.Context(), tok.ID)
 	c.Status(http.StatusOK)
 }
 
@@ -141,7 +138,7 @@ func (s *Service) issueReset(ctx context.Context, userID uuid.UUID) (string, err
 
 func (s *Service) issueCredential(ctx context.Context, userID uuid.UUID, kind string, ttl time.Duration) (string, error) {
 	raw, hash := newCredential()
-	_, err := s.store.q.CreateAuthToken(ctx, database.CreateAuthTokenParams{
+	_, err := s.store.CreateAuthToken(ctx, database.CreateAuthTokenParams{
 		UserID:    userID,
 		Kind:      kind,
 		TokenHash: hash,
@@ -165,10 +162,7 @@ func (s *Service) sendReset(ctx context.Context, to, credential string) {
 // consume looks up the latest live credential for the user/kind and compares it
 // to the supplied code in constant time.
 func (s *Service) consume(ctx context.Context, userID uuid.UUID, kind, code string) (database.AuthToken, error) {
-	tok, err := s.store.q.GetLatestAuthToken(ctx, database.GetLatestAuthTokenParams{
-		UserID: userID,
-		Kind:   kind,
-	})
+	tok, err := s.store.GetLatestAuthToken(ctx, userID, kind)
 	if err != nil {
 		return database.AuthToken{}, errors.New("not found")
 	}
