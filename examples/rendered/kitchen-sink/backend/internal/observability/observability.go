@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Provider struct {
@@ -59,6 +60,17 @@ func Init(serviceName, endpoint string) *Provider {
 
 	log.Printf("observability: exporting traces for %q to %s", serviceName, endpoint)
 	return &Provider{tp: tp}
+}
+
+// TracerProvider returns the installed tracer provider so other subsystems can
+// attach their instrumentation to the same pipeline — e.g. otelpgx for the
+// Postgres pool, or a Redis/HTTP client later. When Init ran no-op, this falls
+// back to the global provider (also a no-op), so callers never special-case it.
+func (p *Provider) TracerProvider() trace.TracerProvider {
+	if p.tp != nil {
+		return p.tp
+	}
+	return otel.GetTracerProvider()
 }
 
 // Shutdown flushes and stops the exporter. Safe to call on a no-op provider.

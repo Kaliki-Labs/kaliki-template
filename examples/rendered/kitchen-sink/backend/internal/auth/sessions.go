@@ -36,7 +36,7 @@ func (s *Service) issueSession(ctx context.Context, user database.User) (access,
 		return "", "", err
 	}
 	raw, hash := newSecret()
-	if _, err = s.store.q.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
+	if _, err = s.store.CreateRefreshToken(ctx, database.CreateRefreshTokenParams{
 		UserID:    user.ID,
 		TokenHash: hash,
 		ExpiresAt: time.Now().Add(s.refreshTTL),
@@ -55,12 +55,12 @@ func (s *Service) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	old, err := s.store.q.GetRefreshToken(c.Request.Context(), hashToken(body.RefreshToken))
+	old, err := s.store.GetRefreshToken(c.Request.Context(), hashToken(body.RefreshToken))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
 		return
 	}
-	_ = s.store.q.RevokeRefreshToken(c.Request.Context(), old.ID)
+	_ = s.store.RevokeRefreshToken(c.Request.Context(), old.ID)
 
 	user, err := s.store.GetUserByID(c.Request.Context(), old.UserID)
 	if err != nil {
@@ -78,21 +78,18 @@ func (s *Service) Logout(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if tok, err := s.store.q.GetRefreshToken(c.Request.Context(), hashToken(body.RefreshToken)); err == nil {
-		_ = s.store.q.RevokeRefreshToken(c.Request.Context(), tok.ID)
+	if tok, err := s.store.GetRefreshToken(c.Request.Context(), hashToken(body.RefreshToken)); err == nil {
+		_ = s.store.RevokeRefreshToken(c.Request.Context(), tok.ID)
 	}
 	c.Status(http.StatusNoContent)
 }
 
 // GetCurrentUser implements gen.ServerInterface. A worked example of a
-// JWT-protected endpoint: it authenticates the bearer token and returns the
-// caller's user record.
+// JWT-protected endpoint: /auth/me declares `security: bearerAuth` in the spec,
+// so ScopeAuth validated the token and set user_id on the context before this
+// runs. The handler just reads it and returns the user record.
 func (s *Service) GetCurrentUser(c *gin.Context) {
-	claims, ok := s.authenticate(c)
-	if !ok {
-		return
-	}
-	id, err := uuid.Parse(claims.Subject)
+	id, err := uuid.Parse(c.GetString("user_id"))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token subject"})
 		return

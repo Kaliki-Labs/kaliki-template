@@ -23,14 +23,12 @@ COLUMN_ORDER = [
     "include_frontend",
     "include_example_domain",
     "auth",
-    "mailer",
     "verification_method",
     "caching",
     "eventing",
     "payments",
     "push_notifications",
     "object_storage",
-    "agent_tooling",
 ]
 
 # Compact header labels so the table stays readable.
@@ -40,7 +38,6 @@ COLUMN_LABELS = {
     "verification_method": "verify",
     "push_notifications": "push",
     "object_storage": "storage",
-    "agent_tooling": "agent",
 }
 
 

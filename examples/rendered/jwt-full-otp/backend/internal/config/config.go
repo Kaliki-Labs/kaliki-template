@@ -74,6 +74,24 @@ type ObservabilityConfig struct {
 	Endpoint    string `yaml:"endpoint"`
 }
 
+// envOverride copies the named env var into dst when set (a no-op otherwise).
+// Centralizing the "if set, override" check keeps Load a flat list of fields
+// instead of a branch per field, which is what actually drives its cyclomatic
+// complexity.
+func envOverride(dst *string, key string) {
+	if v := os.Getenv(key); v != "" {
+		*dst = v
+	}
+}
+
+func envOverrideInt(dst *int, key string) {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			*dst = n
+		}
+	}
+}
+
 // Load reads the YAML at path, then applies env overrides for anything that is
 // commonly injected by the deployment environment.
 func Load(path string) (*Config, error) {
@@ -89,60 +107,38 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
-	if v := os.Getenv("SERVER_PORT"); v != "" {
-		cfg.Server.Port = v
-	}
-	if v := os.Getenv("DATABASE_URL"); v != "" {
-		cfg.Database.URL = v
-	}
-	if v := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); v != "" {
-		cfg.Observability.Endpoint = v
-	}
-	if v := os.Getenv("JWT_SECRET"); v != "" {
-		cfg.Token.Secret = v
-	}
-	if v := os.Getenv("MAIL_PROVIDER"); v != "" {
-		cfg.Mail.Provider = v
-	}
-	if v := os.Getenv("MAIL_SENDER_ADDRESS"); v != "" {
-		cfg.Mail.SenderAddress = v
-	}
-	if v := os.Getenv("MAIL_BASE_URL"); v != "" {
-		cfg.Mail.BaseURL = v
-	}
-	if v := os.Getenv("SMTP_HOST"); v != "" {
-		cfg.Mail.SMTP.Host = v
-	}
-	if v := os.Getenv("SMTP_PORT"); v != "" {
-		if p, err := strconv.Atoi(v); err == nil {
-			cfg.Mail.SMTP.Port = p
-		}
-	}
-	if v := os.Getenv("SMTP_USERNAME"); v != "" {
-		cfg.Mail.SMTP.Username = v
-	}
-	if v := os.Getenv("SMTP_PASSWORD"); v != "" {
-		cfg.Mail.SMTP.Password = v
-	}
-	if v := os.Getenv("SES_REGION"); v != "" {
-		cfg.Mail.SES.Region = v
-	}
-	if v := os.Getenv("SES_ACCESS_KEY_ID"); v != "" {
-		cfg.Mail.SES.AccessKeyID = v
-	}
-	if v := os.Getenv("SES_SECRET_ACCESS_KEY"); v != "" {
-		cfg.Mail.SES.SecretAccessKey = v
-	}
-	if v := os.Getenv("REDIS_URL"); v != "" {
-		cfg.Redis.URL = v
-	}
+	envOverride(&cfg.Server.Port, "SERVER_PORT")
+	envOverride(&cfg.Database.URL, "DATABASE_URL")
+	envOverride(&cfg.Observability.Endpoint, "OTEL_EXPORTER_OTLP_ENDPOINT")
+	envOverride(&cfg.Token.Secret, "JWT_SECRET")
+	envOverride(&cfg.Mail.Provider, "MAIL_PROVIDER")
+	envOverride(&cfg.Mail.SenderAddress, "MAIL_SENDER_ADDRESS")
+	envOverride(&cfg.Mail.BaseURL, "MAIL_BASE_URL")
+	envOverride(&cfg.Mail.SMTP.Host, "SMTP_HOST")
+	envOverrideInt(&cfg.Mail.SMTP.Port, "SMTP_PORT")
+	envOverride(&cfg.Mail.SMTP.Username, "SMTP_USERNAME")
+	envOverride(&cfg.Mail.SMTP.Password, "SMTP_PASSWORD")
+	envOverride(&cfg.Mail.SES.Region, "SES_REGION")
+	envOverride(&cfg.Mail.SES.AccessKeyID, "SES_ACCESS_KEY_ID")
+	envOverride(&cfg.Mail.SES.SecretAccessKey, "SES_SECRET_ACCESS_KEY")
+	envOverride(&cfg.Redis.URL, "REDIS_URL")
 
-	// Fail fast if the insecure dev secret survived into a real deployment.
-	if os.Getenv("APP_ENV") == "production" &&
-		(cfg.Token.Secret == "" || cfg.Token.Secret == "dev-insecure-change-me") {
-		return nil, errors.New("refusing to start: set a strong JWT_SECRET " +
-			"(the dev default is not allowed when APP_ENV=production)")
+	if err := checkProductionSecret(cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
+}
+
+// checkProductionSecret fails fast if the insecure dev JWT secret survived
+// into a real deployment.
+func checkProductionSecret(cfg *Config) error {
+	if os.Getenv("APP_ENV") != "production" {
+		return nil
+	}
+	if cfg.Token.Secret == "" || cfg.Token.Secret == "dev-insecure-change-me" {
+		return errors.New("refusing to start: set a strong JWT_SECRET " +
+			"(the dev default is not allowed when APP_ENV=production)")
+	}
+	return nil
 }

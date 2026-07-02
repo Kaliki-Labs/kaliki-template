@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	gen "github.com/example/kitchen-sink-app/backend/gen/api/auth"
@@ -16,10 +17,10 @@ import (
 )
 
 type Service struct {
-	store      *Store
+	store      Store
 	tokens     *TokenIssuer
 	refreshTTL time.Duration
-	mailer mail.Mailer
+	mailer     mail.Mailer
 }
 
 func refreshTTL(cfg config.TokenConfig) time.Duration {
@@ -30,18 +31,21 @@ func refreshTTL(cfg config.TokenConfig) time.Duration {
 	return time.Duration(h) * time.Hour
 }
 
-func New(db *database.DB, cfg config.TokenConfig, mailer mail.Mailer) *Service {
+func New(pool *pgxpool.Pool, cfg config.TokenConfig, mailer mail.Mailer) *Service {
 	return &Service{
-		store:      NewStore(db),
+		store:      NewStore(pool),
 		tokens:     NewTokenIssuer(cfg),
 		refreshTTL: refreshTTL(cfg),
 		mailer:     mailer,
 	}
 }
 
-// Register mounts the generated routes under the given router group.
+// Register mounts the generated routes under the given router group, guarding
+// them with ScopeAuth so the OpenAPI `security` blocks decide what needs a token.
 func (s *Service) Register(r gin.IRouter) {
-	gen.RegisterHandlers(r, s)
+	gen.RegisterHandlersWithOptions(r, s, gen.GinServerOptions{
+		Middlewares: []gen.MiddlewareFunc{gen.MiddlewareFunc(s.ScopeAuth())},
+	})
 }
 
 // Signup implements gen.ServerInterface.
@@ -51,8 +55,12 @@ func (s *Service) Signup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if body.Email == "" || len(body.Password) < 8 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email and password (min 8 chars) are required"})
+	if body.Email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email is required"})
+		return
+	}
+	if err := ValidatePassword(body.Password); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -67,7 +75,12 @@ func (s *Service) Signup(c *gin.Context) {
 		name = *body.Name
 	}
 
-	user, err := s.store.CreateUser(c.Request.Context(), string(body.Email), hash, name, "user")
+	user, err := s.store.CreateUser(c.Request.Context(), database.CreateUserParams{
+		Email:        string(body.Email),
+		PasswordHash: hash,
+		Name:         name,
+		Role:         "user",
+	})
 	if err != nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "email already registered"})
 		return

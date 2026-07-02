@@ -58,9 +58,9 @@ _message_after_copy: |
   Next steps:
     cd {{ project_slug }}
     cp .env.example .env
-    docker compose up --build        # backend + postgres + redis{% if auth == 'jwt-full' and mailer %} + mailpit{% endif %}
+    docker compose up --build        # backend + postgres + redis{% if auth == 'jwt' %} + mailpit{% endif %}
     curl localhost:8080/health
-  {% if auth == 'jwt-full' and mailer %}
+  {% if auth == 'jwt' %}
   Verification / password-reset emails are captured by Mailpit:
     open http://localhost:8025
   {% endif %}
@@ -115,20 +115,13 @@ auth:
   help: Authentication module
   choices:
     "None": none
-    "JWT (signup + login)": jwt-basic
-    "JWT full (invite + password reset)": jwt-full
-  default: jwt-full
+    "JWT (signup + login + verification + password reset)": jwt
+  default: jwt
 
-# Real transactional email transports (SMTP + SES) for verification + password
-# reset, plus Mailpit in the local stack. When false, the mail package is still
-# generated but only with the log transport: credentials are written to the
-# server log and NEVER returned in the API response. Switching this flag never
-# leaks tokens to clients.
-mailer:
-  type: bool
-  help: Real email transports (SMTP -> Mailpit locally, SES in prod) + Mailpit
-  default: true
-  when: "{{ auth == 'jwt-full' }}"
+# The mail package is always generated whenever auth is present. Transport is a
+# runtime choice via MAIL_PROVIDER (log default locally -> Mailpit; SES in prod),
+# not a compile-time flag: the log transport writes credentials to the server log
+# and NEVER returns them in the API response, so no config ever leaks tokens.
 
 verification_method:
   type: str
@@ -137,7 +130,7 @@ verification_method:
     "OTP code (6-digit, mobile-friendly)": otp
     "Token link (URL with embedded token)": token
   default: otp
-  when: "{{ auth == 'jwt-full' }}"
+  when: "{{ auth == 'jwt' }}"
 
 caching:
   type: str
@@ -180,11 +173,10 @@ object_storage:
 # frontend ships a handful of local widgets in frontend/lib/widgets; extract a
 # real shared_ui package into its own repo once a second app needs it.
 
-# ─── Tooling (always-on, opt-out) ────────────────────────────────────────────
-agent_tooling:
-  type: bool
-  help: Include CLAUDE.md / AGENTS.md / doc-drift / fitness checks
-  default: true
+# ─── Tooling ─────────────────────────────────────────────────────────────────
+# Agent tooling (CLAUDE.md / AGENTS.md / doc-drift / fitness checks) is always
+# generated: it's pure markdown + scripts with zero runtime cost, and the
+# fitness checks are meant to be strict from commit one.
 
 # observability is intentionally NOT a flag — always generated with a no-op
 # exporter by default; configure a real endpoint via config yaml.

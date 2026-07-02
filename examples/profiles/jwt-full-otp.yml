@@ -12,18 +12,17 @@ meta:
     - "verification_method=otp (otp_screen.dart + OTP service path)"
     - "mailer=true (SMTP/Mailpit transport; tokens never returned in API response)"
     - "full frontend auth wiring (auth_controller, router redirects)"
-  validates: [go build, go vet, go test, flutter analyze, flutter test, docker smoke]
+  validates:
+    [go build, go vet, go test, flutter analyze, flutter test, docker smoke]
 
 answers:
   project_name: "JWT Full OTP App"
   include_frontend: true
   include_example_domain: true
-  auth: jwt-full
-  mailer: true
+  auth: jwt
   verification_method: otp
   caching: redis
   eventing: none
   payments: none
   push_notifications: none
   object_storage: none
-  agent_tooling: true

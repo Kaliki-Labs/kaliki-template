@@ -39,6 +39,16 @@ type ObservabilityConfig struct {
 	Endpoint    string `yaml:"endpoint"`
 }
 
+// envOverride copies the named env var into dst when set (a no-op otherwise).
+// Centralizing the "if set, override" check keeps Load a flat list of fields
+// instead of a branch per field, which is what actually drives its cyclomatic
+// complexity.
+func envOverride(dst *string, key string) {
+	if v := os.Getenv(key); v != "" {
+		*dst = v
+	}
+}
+
 // Load reads the YAML at path, then applies env overrides for anything that is
 // commonly injected by the deployment environment.
 func Load(path string) (*Config, error) {
@@ -54,18 +64,10 @@ func Load(path string) (*Config, error) {
 		}
 	}
 
-	if v := os.Getenv("SERVER_PORT"); v != "" {
-		cfg.Server.Port = v
-	}
-	if v := os.Getenv("DATABASE_URL"); v != "" {
-		cfg.Database.URL = v
-	}
-	if v := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); v != "" {
-		cfg.Observability.Endpoint = v
-	}
-	if v := os.Getenv("JWT_SECRET"); v != "" {
-		cfg.Token.Secret = v
-	}
+	envOverride(&cfg.Server.Port, "SERVER_PORT")
+	envOverride(&cfg.Database.URL, "DATABASE_URL")
+	envOverride(&cfg.Observability.Endpoint, "OTEL_EXPORTER_OTLP_ENDPOINT")
+	envOverride(&cfg.Token.Secret, "JWT_SECRET")
 
 	return cfg, nil
 }

@@ -17,6 +17,8 @@ paths:
     post:
       operationId: createItem
       tags: [items]
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -51,9 +53,15 @@ paths:
         "404":
           description: Not found
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     Item:
       type: object
+      required: [id, name, created_at]
       properties:
         id:
           type: string

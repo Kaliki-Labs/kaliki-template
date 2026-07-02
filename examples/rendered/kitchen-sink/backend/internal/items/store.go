@@ -4,26 +4,29 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/example/kitchen-sink-app/backend/internal/database"
 )
 
-// Store wraps the sqlc-generated queries. The Item type and the ListItems /
-// CreateItem / GetItem methods are generated from sql/queries/items.sql.
-type Store struct {
-	q *database.Queries
+// Store is the persistence seam for the items domain: a hand-written interface
+// narrowed to the queries this domain uses. It exists so the service depends on
+// behaviour, not on the generated struct — the test seam (pass a fake) and the
+// future transaction seam. The sqlc-generated *database.Queries satisfies it
+// directly, so NewStore just returns that; database.Queries.WithTx also returns
+// *Queries, so a transactional store satisfies the same interface for free.
+//
+// Method names mirror the generated queries — "go to implementation" lands on
+// the sqlc method (its SQL const sits right above it). The breadcrumb names the
+// source file so the mapping is greppable without an IDE.
+type Store interface {
+	// ListItems — sql/queries/items.sql
+	ListItems(ctx context.Context) ([]database.Item, error)
+	// CreateItem — sql/queries/items.sql
+	CreateItem(ctx context.Context, name string) (database.Item, error)
+	// GetItem — sql/queries/items.sql
+	GetItem(ctx context.Context, id uuid.UUID) (database.Item, error)
 }
 
-func NewStore(db *database.DB) *Store { return &Store{q: database.New(db.Pool)} }
-
-func (s *Store) List(ctx context.Context) ([]database.Item, error) {
-	return s.q.ListItems(ctx)
-}
-
-func (s *Store) Create(ctx context.Context, name string) (database.Item, error) {
-	return s.q.CreateItem(ctx, name)
-}
-
-func (s *Store) Get(ctx context.Context, id uuid.UUID) (database.Item, error) {
-	return s.q.GetItem(ctx, id)
-}
+// NewStore returns a Postgres-backed Store over the shared pool.
+func NewStore(pool *pgxpool.Pool) Store { return database.New(pool) }

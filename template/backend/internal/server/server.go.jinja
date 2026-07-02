@@ -13,10 +13,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+{%- if auth != 'none' or include_example_domain %}
+	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgxpool"
+{%- endif %}
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"{{ go_module_path }}/internal/config"
-	"{{ go_module_path }}/internal/database"
+{%- if auth != 'none' or include_example_domain %}
+	"{{ go_module_path }}/internal/migrate"
+{%- endif %}
 	"{{ go_module_path }}/internal/observability"
 {%- if include_example_domain %}
 	"{{ go_module_path }}/internal/items"
@@ -24,7 +30,7 @@ import (
 {%- if auth != 'none' %}
 	"{{ go_module_path }}/internal/auth"
 {%- endif %}
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 	"{{ go_module_path }}/internal/mail"
 {%- endif %}
 {%- if caching == 'redis' %}
@@ -58,20 +64,32 @@ func Run() {
 
 	obs := observability.Init(cfg.Observability.ServiceName, cfg.Observability.Endpoint)
 	defer obs.Shutdown()
+{%- if auth != 'none' or include_example_domain %}
 
-	db, err := database.Connect(ctx, cfg.Database.URL)
+	// Build the shared pgx pool and attach the otelpgx tracer to the same
+	// pipeline observability installed (no-op until an exporter is configured).
+	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
-	defer db.Close()
+	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTracerProvider(obs.TracerProvider()))
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("database: %v", err)
+	}
 
 	migrationsDir := os.Getenv("MIGRATE_PATH")
 	if migrationsDir == "" {
 		migrationsDir = "sql/schema"
 	}
-	if err := database.Migrate(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
+	if err := migrate.Up(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
 		log.Fatalf("migrate: %v", err)
 	}
+{%- endif %}
 {%- if caching == 'redis' %}
 
 	redisCache, err := cache.Connect(ctx, cfg.Redis)
@@ -117,13 +135,12 @@ func Run() {
 {%- if auth != 'none' or include_example_domain %}
 	api := r.Group("/api/v1")
 {%- endif %}
-{%- if auth == 'jwt-full' %}
-	auth.New(db, cfg.Token, mail.New(cfg.Mail)).Register(api)
-{%- elif auth == 'jwt-basic' %}
-	auth.New(db, cfg.Token).Register(api)
+{%- if auth == 'jwt' %}
+	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail))
+	authSvc.Register(api)
 {%- endif %}
 {%- if include_example_domain %}
-	items.New(db).Register(api)
+	items.New(pool).Register(api{% if auth == 'jwt' %}, authSvc.ScopeAuth(){% endif %})
 {%- endif %}
 
 	srv := &http.Server{

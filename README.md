@@ -25,7 +25,7 @@ uvx copier copy . ../my-app
 ```
 
 You'll be prompted for identity (name, Go module path, bundle id, db name) and
-module choices (auth, mailer, verification method, caching, eventing, payments,
+module choices (auth, verification method, caching, eventing, payments,
 push, object storage, example domain). Observability is always included with a
 no-op default.
 
@@ -60,9 +60,10 @@ verified end-to-end (see `test-template.sh` / `.github/workflows/template-ci.yml
 - [x] redocly auto-discovery spec build + Dart client regen script
 - [x] auth: JWT signup/login, email verification + password reset, argon2id,
       refresh-token rotation + revocation, and a protected `GET /auth/me`
-- [x] transactional email (`mailer` flag): SMTP + SES + log transports, Mailpit
-      in the local stack; `verification_method` flag (OTP code vs token link).
-      Credentials are emailed/logged, never returned in API responses
+- [x] transactional email: SMTP + SES + log transports, selected at runtime via
+      `MAIL_PROVIDER`; Mailpit in the local stack; `verification_method` flag
+      (OTP code vs token link). Credentials are emailed/logged, never returned
+      in API responses
 - [x] Tier-2 modules: caching (redis), eventing (kafka + outbox), payments,
       push, object storage — integration points, gated by flags
 - [x] transactional outbox relay worker (`cmd/workers`) for eventing

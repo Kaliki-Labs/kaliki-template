@@ -1,7 +1,7 @@
 package auth_test
 
 import (
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 	"context"
 {%- endif %}
 	"os"
@@ -17,11 +17,11 @@ import (
 var (
 	testDB *testsupport.TestDB
 	router *gin.Engine
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 	mailer *recordingMailer
 {%- endif %}
 )
-{% if auth == 'jwt-full' %}
+{% if auth == 'jwt' %}
 // recordingMailer captures sent credentials so tests can read the value that
 // would have been emailed. Production never returns credentials in responses,
 // so this is the supported way to exercise the verify/reset flows.
@@ -48,11 +48,9 @@ func TestMain(m *testing.M) {
 	testDB = testsupport.Connect("test_auth")
 
 	r, api := testsupport.NewRouter()
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 	mailer = newRecordingMailer()
-	auth.New(testDB.DB, config.TokenConfig{Secret: "test-secret", ExpiryHours: 1}, mailer).Register(api)
-{%- else %}
-	auth.New(testDB.DB, config.TokenConfig{Secret: "test-secret", ExpiryHours: 1}).Register(api)
+	auth.New(testDB.Pool, config.TokenConfig{Secret: "test-secret", ExpiryHours: 1}, mailer).Register(api)
 {%- endif %}
 	router = r
 
@@ -62,7 +60,7 @@ func TestMain(m *testing.M) {
 func setupTest(t *testing.T) {
 	t.Helper()
 	testDB.Truncate(t)
-{%- if auth == 'jwt-full' %}
+{%- if auth == 'jwt' %}
 	mailer.verifications = map[string]string{}
 	mailer.resets = map[string]string{}
 {%- endif %}

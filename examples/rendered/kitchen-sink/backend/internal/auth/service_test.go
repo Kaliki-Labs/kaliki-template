@@ -23,7 +23,7 @@ func TestSignup(t *testing.T) {
 		setupTest(t)
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"a@b.com","password":"password123","name":"A"}`)
+			`{"email":"a@b.com","password":"Password123!","name":"A"}`)
 		if w.Code != http.StatusCreated {
 			t.Fatalf("status = %d, want 201 (%s)", w.Code, w.Body.String())
 		}
@@ -38,7 +38,7 @@ func TestSignup(t *testing.T) {
 			`SELECT password_hash FROM users WHERE email = $1`, "a@b.com").Scan(&hash); err != nil {
 			t.Fatalf("query: %v", err)
 		}
-		if hash == "" || hash == "password123" {
+		if hash == "" || hash == "Password123!" {
 			t.Fatalf("password not hashed: %q", hash)
 		}
 		if body["refresh_token"] == "" || body["refresh_token"] == nil {
@@ -57,9 +57,9 @@ func TestSignup(t *testing.T) {
 		setupTest(t)
 
 		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"dup@b.com","password":"password123"}`)
+			`{"email":"dup@b.com","password":"Password123!"}`)
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"dup@b.com","password":"password123"}`)
+			`{"email":"dup@b.com","password":"Password123!"}`)
 		if w.Code != http.StatusConflict {
 			t.Fatalf("status = %d, want 409", w.Code)
 		}
@@ -79,7 +79,7 @@ func TestSignup(t *testing.T) {
 func TestLogin(t *testing.T) {
 	signup := func() {
 		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"u@b.com","password":"password123"}`)
+			`{"email":"u@b.com","password":"Password123!"}`)
 	}
 
 	t.Run("success", func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestLogin(t *testing.T) {
 		signup()
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
-			`{"email":"u@b.com","password":"password123"}`)
+			`{"email":"u@b.com","password":"Password123!"}`)
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200 (%s)", w.Code, w.Body.String())
 		}
@@ -121,7 +121,7 @@ func TestLogin(t *testing.T) {
 func signupSession(t *testing.T, email string) (string, string) {
 	t.Helper()
 	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-		`{"email":"`+email+`","password":"password123"}`)
+		`{"email":"`+email+`","password":"Password123!"}`)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("signup status = %d (%s)", w.Code, w.Body.String())
 	}
@@ -211,7 +211,7 @@ func TestVerifyEmail(t *testing.T) {
 		setupTest(t)
 
 		signupResp := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"v@b.com","password":"password123"}`)
+			`{"email":"v@b.com","password":"Password123!"}`)
 		credential := mailer.verifications["v@b.com"]
 		if credential == "" {
 			t.Fatal("no verification credential captured")
@@ -248,7 +248,7 @@ func TestConfirmPasswordReset(t *testing.T) {
 		setupTest(t)
 
 		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"r@b.com","password":"password123"}`)
+			`{"email":"r@b.com","password":"Password123!"}`)
 		req := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/password-reset/request",
 			`{"email":"r@b.com"}`)
 		if req.Code != http.StatusOK {
@@ -259,14 +259,14 @@ func TestConfirmPasswordReset(t *testing.T) {
 			t.Fatal("no reset credential captured")
 		}
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/password-reset/confirm",
-			`{"token":"`+credential+`","password":"newpassword123"}`)
+			`{"token":"`+credential+`","password":"NewPassword123!"}`)
 		if w.Code != http.StatusOK {
 			t.Fatalf("confirm status = %d, want 200 (%s)", w.Code, w.Body.String())
 		}
 
 		// New password works.
 		login := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
-			`{"email":"r@b.com","password":"newpassword123"}`)
+			`{"email":"r@b.com","password":"NewPassword123!"}`)
 		if login.Code != http.StatusOK {
 			t.Fatalf("login with new password = %d, want 200", login.Code)
 		}
@@ -275,7 +275,7 @@ func TestConfirmPasswordReset(t *testing.T) {
 	t.Run("validation", func(t *testing.T) {
 		setupTest(t)
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/password-reset/confirm",
-			`{"token":"bad","password":"newpassword123"}`)
+			`{"token":"bad","password":"NewPassword123!"}`)
 		if w.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400", w.Code)
 		}
