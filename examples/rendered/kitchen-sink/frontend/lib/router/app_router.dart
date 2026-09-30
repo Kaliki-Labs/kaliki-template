@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -28,7 +27,7 @@ GoRouter appRouter(Ref ref) {
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null; // wait for the initial load
-      final loggedIn = auth.valueOrNull != null;
+      final loggedIn = auth.value != null;
       final onAuthScreen =
           state.matchedLocation == '/login' || state.matchedLocation == '/signup';
 

@@ -22,7 +22,7 @@ _tasks:
   # from the committed example so `go run ./cmd/server` works out of the box.
   - command: "cp config/env.example.yaml config/env.yaml"
     working_directory: "backend"
-  - command: "go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0 generate"
+  - command: "go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate"
     working_directory: "backend"
     when: "{{ (include_example_domain or auth != 'none') and not _skip_tasks }}"
   - command: >-
@@ -46,6 +46,13 @@ _tasks:
   - command: "bash scripts/regenerate-api-client.sh"
     when: "{{ include_frontend and not _skip_tasks }}"
   - command: "flutter create --project-name {{ project_slug | replace('-', '_') }} --org {{ app_bundle_id.rsplit('.', 1)[0] }} . && rm -f test/widget_test.dart"
+    working_directory: "frontend"
+    when: "{{ include_frontend and not _skip_tasks }}"
+  # `flutter create` only adds INTERNET to the debug/profile manifests, not the
+  # release one, so a release build of this API-backed app can't reach the network.
+  - command: >-
+      perl -i -pe 's{(<application)}{    <uses-permission android:name="android.permission.INTERNET"/>\n$1}'
+      android/app/src/main/AndroidManifest.xml
     working_directory: "frontend"
     when: "{{ include_frontend and not _skip_tasks }}"
   - command: "flutter pub get && dart run build_runner build --delete-conflicting-outputs"

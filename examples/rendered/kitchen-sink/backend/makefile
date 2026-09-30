@@ -1,5 +1,5 @@
 # Pinned codegen tool versions (run via `go run`, no global install needed).
-SQLC_VERSION := v1.27.0
+SQLC_VERSION := v1.29.0
 OAPI_VERSION := v2.4.1
 
 .PHONY: build test test-up test-down generate sqlc oapi

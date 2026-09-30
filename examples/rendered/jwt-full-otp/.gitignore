@@ -4,10 +4,14 @@ backend/bin/
 backend/app
 *.log
 
+# Node (api/ tooling)
+node_modules/
+
 # Flutter
 .dart_tool/
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-pubspec.lock
+# Library packages don't commit their lockfile; application packages do.
+/packages/shared_api_client/pubspec.lock
