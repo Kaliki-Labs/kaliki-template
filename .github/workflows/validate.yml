@@ -48,8 +48,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          # No npm cache here: this step runs before `copier copy` renders the
+          # profile, so no package-lock.json exists in the checkout yet (unlike
+          # setup-go above, setup-node errors hard on an empty glob match).
       - uses: astral-sh/setup-uv@v5
 
       - name: Render profile (with tasks)
