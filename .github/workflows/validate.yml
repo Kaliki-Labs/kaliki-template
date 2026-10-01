@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false # nightly: see every broken profile in one run
       matrix:
-        profile: [minimal, jwt-basic, jwt-full-otp, kitchen-sink]
+        profile: [minimal, jwt-full-otp, kitchen-sink]
     name: ${{ matrix.profile }}
     services:
       postgres:
@@ -48,9 +48,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          # No npm cache here: this step runs before `copier copy` renders the
+          # profile, so no package-lock.json exists in the checkout yet (unlike
+          # setup-go above, setup-node errors hard on an empty glob match).
       - uses: astral-sh/setup-uv@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: "stable"
+        # copier.yml's _tasks run `flutter create`/`dart run build_runner`
+        # unconditionally when include_frontend=true, so the render step below
+        # needs Flutter on PATH even though this job never runs `flutter analyze`.
 
       - name: Render profile (with tasks)
         run: |

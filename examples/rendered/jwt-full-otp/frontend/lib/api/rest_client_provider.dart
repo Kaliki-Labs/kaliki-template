@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_api_client/export.dart';
@@ -12,7 +11,7 @@ part 'rest_client_provider.g.dart';
 ///   flutter run --dart-define=API_BASE_URL=https://api.example.com
 const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:8080',
+  defaultValue: 'http://localhost:8080/api/v1',
 );
 
 @Riverpod(keepAlive: true)
