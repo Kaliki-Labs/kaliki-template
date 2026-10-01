@@ -2,19 +2,26 @@ name: shared_api_client
 description: Retrofit/Dio API client generated from the OpenAPI spec.
 publish_to: "none"
 version: 0.1.0
+# Member of the Dart pub workspace rooted at the project root pubspec.yaml.
+resolution: workspace
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
   dio: ^5.9.0
   freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
   retrofit: ^4.9.2
 
 dev_dependencies:
-  build_runner: ^2.10.3
-  freezed: ^3.2.3
+  build_runner: ^2.16.1
+  # freezed >=4.0.0 required: it's the lowest major whose `analyzer` range
+  # overlaps riverpod_generator's (both land on analyzer 14.x). All packages
+  # in a pub workspace share ONE resolved dependency set, so a version that
+  # resolved fine standalone can become a conflict once merged — this was hit
+  # and fixed during the Melos migration, verified via `dart pub get`.
+  freezed: ^4.0.0
   json_serializable: ^6.11.2
   retrofit_generator: ^10.2.1
   # Fork of swagger_parser adding x-dart-type / x-dart-import support, so

@@ -1,0 +1,25 @@
+# Dart pub workspace root. This file has no Dart code of its own — it exists
+# so `frontend` and `packages/shared_api_client` resolve as one workspace
+# (shared `.dart_tool/`, single `dart pub get` / `build_runner` invocation)
+# instead of two independently-resolved packages. Add future packages (e.g. a
+# shared_ui design-system package) as a new line under `workspace:` below plus
+# a matching entry in the `melos.packages` glob — nothing else changes.
+#
+# Melos (https://melos.invertase.dev) manages this workspace: `dart run melos
+# bootstrap` keeps `workspace:` below and the per-package `pubspec_overrides.yaml`
+# files in sync as packages are added/removed, and gives scripted commands
+# (`melos run <script>`) once the workspace grows past two packages.
+name: kitchen_sink_app_workspace
+publish_to: "none"
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+workspace:
+  - frontend
+  - packages/shared_api_client
+
+melos:
+  name: kitchen_sink_app
+
+dev_dependencies:
+  melos: ^8.0.0

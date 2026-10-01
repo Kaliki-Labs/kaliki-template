@@ -19,6 +19,10 @@ Postgres, Redis and the backend all come up together. Schema migrations run auto
 - `backend/` — Go HTTP server (gin + pgx). Domains live in `internal/<domain>`.
 - `api/` — OpenAPI specs (source of truth for the API contract).
 - `frontend/` — Flutter app (Riverpod + GoRouter).
+- `packages/shared_api_client/` — generated Dart OpenAPI client. `frontend/`
+  and this package are members of one Dart pub workspace (see the root
+  `pubspec.yaml`, managed with [Melos](https://melos.invertase.dev)); run
+  `make generate` after changing `api/services/*.yaml` to regenerate both.
 
 ## Observability
 

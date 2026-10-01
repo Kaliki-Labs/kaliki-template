@@ -11,3 +11,4 @@ check:
 hooks:
 	git config core.hooksPath .githooks
 	@echo "pre-push hook enabled (core.hooksPath=.githooks)"
+
