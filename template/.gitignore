@@ -13,5 +13,11 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
-# Library packages don't commit their lockfile; application packages do.
-/packages/shared_api_client/pubspec.lock
+
+# Melos bootstrap writes workspace-level IntelliJ project files at the
+# project root (frontend/.gitignore already covers its own nested .idea/).
+.idea/
+*.iml
+# frontend/ and packages/shared_api_client/ are members of one Dart pub
+# workspace: there's a single pubspec.lock at the project root (not one per
+# package) and it's committed, same as any application's lockfile.
