@@ -20,4 +20,3 @@ generate:
 	bash scripts/regenerate-api-client.sh
 	dart run melos bootstrap
 	dart run build_runner build --workspace --delete-conflicting-outputs
-
