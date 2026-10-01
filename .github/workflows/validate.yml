@@ -93,10 +93,13 @@ jobs:
           npm run build:local
 
       # The render step above already ran copier's _tasks, which for
-      # include_frontend profiles fully bootstrap the frontend (regenerate the
-      # API client, `flutter create`, `flutter pub get`, `build_runner build`).
-      # Re-running that bootstrap here would just redo the same work for free
-      # (build_runner finding 0 outputs to generate) — only analyze/test are new.
+      # include_frontend profiles fully bootstrap the frontend + shared_api_client
+      # Dart pub workspace (regenerate the API client, `flutter create`,
+      # `melos bootstrap`, one `build_runner build --workspace`). Re-running that
+      # bootstrap here would just redo the same work for free (build_runner
+      # finding 0 outputs to generate) — only analyze/test are new. `flutter
+      # analyze` run from frontend/ correctly scopes to the frontend package
+      # even though it's a workspace member (verified empirically).
       - name: Frontend analyze + test
         if: matrix.include_frontend
         working-directory: out/frontend

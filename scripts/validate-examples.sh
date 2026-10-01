@@ -45,9 +45,10 @@ for name in "${profiles[@]}"; do
   ( cd "$work/backend" && go build ./... && go vet ./... && go test ./... )
 
   if [ "$(has_frontend "$src")" = "True" ]; then
-    # copier's own _tasks already bootstrapped the frontend above (regenerate
-    # the API client, `flutter create`, `flutter pub get`, `build_runner
-    # build`) — re-running that here would just redo the same work for free.
+    # copier's own _tasks already bootstrapped the frontend + shared_api_client
+    # Dart pub workspace above (regenerate the API client, `flutter create`,
+    # `melos bootstrap`, one `build_runner build --workspace`) — re-running
+    # that here would just redo the same work for free.
     ( cd "$work/frontend" \
         && flutter analyze \
         && { ls test/*_test.dart >/dev/null 2>&1 && flutter test || echo "(no frontend tests — skipping flutter test)"; } )
