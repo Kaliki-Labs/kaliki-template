@@ -22,42 +22,47 @@ _tasks:
   # from the committed example so `go run ./cmd/server` works out of the box.
   - command: "cp config/env.example.yaml config/env.yaml"
     working_directory: "backend"
-  - command: "go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate"
-    working_directory: "backend"
-    when: "{{ (include_example_domain or auth != 'none') and not _skip_tasks }}"
-  - command: >-
-      for d in gen/api/*/; do [ -e "$d/codegen.yaml" ] || continue;
-      name=$(basename "$d");
-      (cd "$d" && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1
-      --config=codegen.yaml "../../../../api/services/$name.yaml"); done
-    working_directory: "backend"
+  # Backend codegen (sqlc, oapi-codegen, go mod tidy) touches only backend/;
+  # the API spec build / frontend bootstrap touches only api/,
+  # packages/shared_api_client/ and frontend/. The two tracks never read or
+  # write the same files, so run them as parallel background jobs and fail if
+  # either does — this roughly halves the wall-clock cost of a fresh
+  # `copier copy` whenever sqlc/oapi-codegen and the frontend pipeline would
+  # otherwise run back-to-back.
+  - command: |-
+      (
+        set -e
+        cd backend
+      {%- if include_example_domain or auth != 'none' %}
+        go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 generate
+      {%- endif %}
+        for d in gen/api/*/; do
+          [ -e "$d/codegen.yaml" ] || continue
+          name=$(basename "$d")
+          (cd "$d" && go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1 --config=codegen.yaml "../../../../api/services/$name.yaml")
+        done
+        go mod tidy
+      ) & backend_pid=$!
+      (
+        set -e
+      {%- if include_frontend %}
+        bash scripts/regenerate-api-client.sh
+        cd frontend
+        flutter create --project-name {{ project_slug | replace('-', '_') }} --org {{ app_bundle_id.rsplit('.', 1)[0] }} .
+        rm -f test/widget_test.dart
+        perl -i -pe 's{(<application)}{    <uses-permission android:name="android.permission.INTERNET"/>\n$1}' android/app/src/main/AndroidManifest.xml
+        flutter pub get
+        dart run build_runner build --delete-conflicting-outputs
+      {%- else %}
+        cd api
+        npm install
+        npm run build:local
+      {%- endif %}
+      ) & frontend_pid=$!
+      wait "$backend_pid"; backend_status=$?
+      wait "$frontend_pid"; frontend_status=$?
+      [ "$backend_status" -eq 0 ] && [ "$frontend_status" -eq 0 ]
     when: "{{ not _skip_tasks }}"
-  - command: "go mod tidy"
-    working_directory: "backend"
-    when: "{{ not _skip_tasks }}"
-  # Build the combined OpenAPI spec (api/openapi.yaml). Needed on its own when
-  # there is no frontend; the frontend script below rebuilds it otherwise.
-  - command: "npm install && npm run build:local"
-    working_directory: "api"
-    when: "{{ not include_frontend and not _skip_tasks }}"
-  # Frontend: build the spec + generate the Dart API client, scaffold the
-  # platform folders, then resolve deps and run build_runner for the .g.dart
-  # files. Leaves the Flutter app ready to `flutter run`.
-  - command: "bash scripts/regenerate-api-client.sh"
-    when: "{{ include_frontend and not _skip_tasks }}"
-  - command: "flutter create --project-name {{ project_slug | replace('-', '_') }} --org {{ app_bundle_id.rsplit('.', 1)[0] }} . && rm -f test/widget_test.dart"
-    working_directory: "frontend"
-    when: "{{ include_frontend and not _skip_tasks }}"
-  # `flutter create` only adds INTERNET to the debug/profile manifests, not the
-  # release one, so a release build of this API-backed app can't reach the network.
-  - command: >-
-      perl -i -pe 's{(<application)}{    <uses-permission android:name="android.permission.INTERNET"/>\n$1}'
-      android/app/src/main/AndroidManifest.xml
-    working_directory: "frontend"
-    when: "{{ include_frontend and not _skip_tasks }}"
-  - command: "flutter pub get && dart run build_runner build --delete-conflicting-outputs"
-    working_directory: "frontend"
-    when: "{{ include_frontend and not _skip_tasks }}"
 
 _message_after_copy: |
   Project "{{ project_name }}" generated.
