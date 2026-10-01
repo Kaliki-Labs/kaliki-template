@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/example/minimal-app/backend/internal/config"
+	"github.com/example/minimal-app/backend/internal/health"
 	"github.com/example/minimal-app/backend/internal/observability"
 )
 
@@ -37,9 +38,7 @@ func Run() {
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.Use(otelgin.Middleware(cfg.Observability.ServiceName))
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	health.New().Register(r)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,
