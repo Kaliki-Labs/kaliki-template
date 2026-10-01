@@ -18,7 +18,7 @@ jobs:
         ports:
           - 25432:5432
         options: >-
-          --health-cmd "pg_isready -U test_user"
+          --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable
