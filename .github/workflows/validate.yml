@@ -23,7 +23,16 @@ jobs:
     strategy:
       fail-fast: false # nightly: see every broken profile in one run
       matrix:
-        profile: [minimal, jwt-full-otp, kitchen-sink]
+        # include_frontend mirrors each profile's examples/profiles/*.yml answer,
+        # known statically — lets later steps skip Flutter entirely for profiles
+        # that don't need it instead of installing it unconditionally.
+        include:
+          - profile: minimal
+            include_frontend: false
+          - profile: jwt-full-otp
+            include_frontend: true
+          - profile: kitchen-sink
+            include_frontend: true
     name: ${{ matrix.profile }}
     services:
       postgres:
@@ -35,7 +44,7 @@ jobs:
         ports:
           - 25432:5432
         options: >-
-          --health-cmd "pg_isready -U test_user"
+          --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable
@@ -53,12 +62,13 @@ jobs:
           # setup-go above, setup-node errors hard on an empty glob match).
       - uses: astral-sh/setup-uv@v5
       - uses: subosito/flutter-action@v2
+        if: matrix.include_frontend
         with:
           flutter-version: "3.47.4"
           channel: "stable"
-        # copier.yml's _tasks run `flutter create`/`dart run build_runner`
-        # unconditionally when include_frontend=true, so the render step below
-        # needs Flutter on PATH even though this job never runs `flutter analyze`.
+          cache: true # Blacksmith redirects actions/cache, so this persists the SDK across runs.
+        # Skipped for profiles without a frontend — no need to pay for the SDK
+        # download/extract on every run.
 
       - name: Render profile (with tasks)
         run: |
@@ -82,6 +92,14 @@ jobs:
           npm install
           npm run build:local
 
-      # Frontend (flutter analyze/test) is validated locally via
-      # scripts/validate-examples.sh — intentionally not run here to keep the
-      # nightly lean. Promote it into the matrix if frontend regressions slip.
+      # The render step above already ran copier's _tasks, which for
+      # include_frontend profiles fully bootstrap the frontend (regenerate the
+      # API client, `flutter create`, `flutter pub get`, `build_runner build`).
+      # Re-running that bootstrap here would just redo the same work for free
+      # (build_runner finding 0 outputs to generate) — only analyze/test are new.
+      - name: Frontend analyze + test
+        if: matrix.include_frontend
+        working-directory: out/frontend
+        run: |
+          flutter analyze
+          if ls test/*_test.dart >/dev/null 2>&1; then flutter test; else echo "(no frontend tests — skipping flutter test)"; fi

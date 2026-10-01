@@ -19,6 +19,7 @@ import (
 
 	"github.com/example/kitchen-sink-app/backend/internal/config"
 	"github.com/example/kitchen-sink-app/backend/internal/migrate"
+	"github.com/example/kitchen-sink-app/backend/internal/health"
 	"github.com/example/kitchen-sink-app/backend/internal/observability"
 	"github.com/example/kitchen-sink-app/backend/internal/items"
 	"github.com/example/kitchen-sink-app/backend/internal/auth"
@@ -96,9 +97,7 @@ func Run() {
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.Use(otelgin.Middleware(cfg.Observability.ServiceName))
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	health.New().Register(r)
 	api := r.Group("/api/v1")
 	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail))
 	authSvc.Register(api)

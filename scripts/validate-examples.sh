@@ -45,16 +45,10 @@ for name in "${profiles[@]}"; do
   ( cd "$work/backend" && go build ./... && go vet ./... && go test ./... )
 
   if [ "$(has_frontend "$src")" = "True" ]; then
-    # Frontend codegen is intentionally NOT in copier _tasks (keeps `copier copy`
-    # from requiring the Flutter SDK). Reproduce the documented bootstrap here
-    # (see rendered TEMPLATE_NOTES.md): API client -> platform folders -> .g.dart.
-    ( cd "$work" && bash scripts/regenerate-api-client.sh )
-    pname="$(awk '/^name:/{print $2; exit}' "$work/frontend/pubspec.yaml")"
+    # copier's own _tasks already bootstrapped the frontend above (regenerate
+    # the API client, `flutter create`, `flutter pub get`, `build_runner
+    # build`) — re-running that here would just redo the same work for free.
     ( cd "$work/frontend" \
-        && flutter create --project-name "$pname" . \
-        && rm -f test/widget_test.dart \
-        && flutter pub get \
-        && dart run build_runner build --delete-conflicting-outputs \
         && flutter analyze \
         && { ls test/*_test.dart >/dev/null 2>&1 && flutter test || echo "(no frontend tests — skipping flutter test)"; } )
   fi

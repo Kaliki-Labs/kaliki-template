@@ -36,4 +36,11 @@ The API enables CORS for browser clients. In development (`APP_ENV` unset or not
 `production`) it reflects any `Origin`, so the frontend works with no setup. In
 production set `CORS_ALLOWED_ORIGINS` to a comma-separated allowlist.
 
+## Fitness checks
+
+`fitness_checks/` enforces cyclomatic complexity and file/line-count limits
+and runs in CI on every push. Run `make hooks` once per clone to enable a
+local pre-push hook that runs the same checks (`make check`) before each
+push; set `SKIP_CHECK=1 git push` to bypass it for a throwaway push.
+
 See `TEMPLATE_NOTES.md` for how to add a domain and remove the example.

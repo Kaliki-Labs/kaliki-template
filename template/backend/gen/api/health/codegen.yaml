@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: health_gen
+generate:
+  gin-server: true
+  models: true
+output: schema.gen.go
+output-options:
+  name-normalizer: ToCamelCase
+  nullable-type: true
