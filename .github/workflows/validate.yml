@@ -92,20 +92,14 @@ jobs:
           npm install
           npm run build:local
 
-      # Frontend codegen is intentionally not a copier _task (keeps `copier copy`
-      # from requiring the Flutter SDK), so reproduce the documented bootstrap
-      # here (see rendered TEMPLATE_NOTES.md) — same steps as
-      # scripts/validate-examples.sh: API client -> platform folders -> .g.dart.
-      - name: Frontend build + analyze
+      # The render step above already ran copier's _tasks, which for
+      # include_frontend profiles fully bootstrap the frontend (regenerate the
+      # API client, `flutter create`, `flutter pub get`, `build_runner build`).
+      # Re-running that bootstrap here would just redo the same work for free
+      # (build_runner finding 0 outputs to generate) — only analyze/test are new.
+      - name: Frontend analyze + test
         if: matrix.include_frontend
-        working-directory: out
+        working-directory: out/frontend
         run: |
-          bash scripts/regenerate-api-client.sh
-          pname="$(awk '/^name:/{print $2; exit}' frontend/pubspec.yaml)"
-          cd frontend
-          flutter create --project-name "$pname" .
-          rm -f test/widget_test.dart
-          flutter pub get
-          dart run build_runner build --delete-conflicting-outputs
           flutter analyze
           if ls test/*_test.dart >/dev/null 2>&1; then flutter test; else echo "(no frontend tests — skipping flutter test)"; fi
