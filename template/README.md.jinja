@@ -22,6 +22,10 @@ Postgres{% if caching == 'redis' %}, Redis{% endif %}{% if eventing == 'kafka-re
 - `api/` — OpenAPI specs (source of truth for the API contract).
 {%- if include_frontend %}
 - `frontend/` — Flutter app (Riverpod + GoRouter).
+- `packages/shared_api_client/` — generated Dart OpenAPI client. `frontend/`
+  and this package are members of one Dart pub workspace (see the root
+  `pubspec.yaml`, managed with [Melos](https://melos.invertase.dev)); run
+  `make generate` after changing `api/services/*.yaml` to regenerate both.
 {%- endif %}
 
 ## Observability
