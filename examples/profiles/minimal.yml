@@ -18,7 +18,6 @@ answers:
   include_frontend: false
   include_example_domain: false
   auth: none
-  caching: none
   eventing: none
   payments: none
   push_notifications: none

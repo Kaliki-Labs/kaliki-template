@@ -34,15 +34,11 @@ import (
 {%- if auth == 'jwt' %}
 	"{{ go_module_path }}/internal/mail"
 {%- endif %}
-{%- if include_example_domain and auth != 'none' %}
+{%- if include_example_domain %}
 	items_gen "{{ go_module_path }}/gen/api/items"
 {%- endif %}
-{%- if auth != 'none' %}
 	"{{ go_module_path }}/internal/ratelimit"
-{%- endif %}
-{%- if caching == 'redis' %}
 	"{{ go_module_path }}/internal/cache"
-{%- endif %}
 {%- if eventing == 'kafka-redpanda' %}
 	"{{ go_module_path }}/internal/events"
 {%- endif %}
@@ -97,18 +93,14 @@ func Run() {
 		log.Fatalf("migrate: %v", err)
 	}
 {%- endif %}
-{%- if caching == 'redis' %}
 
 	redisCache, err := cache.Connect(ctx, cfg.Redis)
 	if err != nil {
 		log.Fatalf("redis: %v", err)
 	}
 	defer redisCache.Close()
-{%- endif %}
-{%- if auth != 'none' %}
 
 	rl := ratelimit.New(redisCache.Client, map[string]ratelimit.KeyExtractor{})
-{%- endif %}
 {%- if eventing == 'kafka-redpanda' %}
 
 	publisher := events.NewPublisher(cfg.Kafka)
@@ -139,7 +131,6 @@ func Run() {
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.Use(otelgin.Middleware(cfg.Observability.ServiceName))
-{%- if auth != 'none' %}
 	if cfg.RateLimit.GlobalEnabled {
 		window, err := time.ParseDuration(cfg.RateLimit.GlobalWindow)
 		if err != nil {
@@ -152,7 +143,6 @@ func Run() {
 			Burst:    cfg.RateLimit.GlobalBurst,
 		}))
 	}
-{%- endif %}
 	health.New().Register(r)
 
 {%- if auth != 'none' or include_example_domain %}
@@ -163,7 +153,7 @@ func Run() {
 	authSvc.Register(api)
 {%- endif %}
 {%- if include_example_domain %}
-	items.New(pool).Register(api{% if auth == 'jwt' %}, authSvc.ScopeAuth(), rl.PerOperation(items_gen.RateLimitRule){% endif %})
+	items.New(pool).Register(api{% if auth == 'jwt' %}, authSvc.ScopeAuth(){% endif %}, rl.PerOperation(items_gen.RateLimitRule))
 {%- endif %}
 
 	srv := &http.Server{

@@ -14,7 +14,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-{%- if caching == 'redis' %}
 
   redis:
     image: redis:7-alpine
@@ -25,7 +24,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
-{%- endif %}
 {%- if eventing == 'kafka-redpanda' %}
 
   redpanda:
@@ -71,9 +69,7 @@ services:
       MAIL_SENDER_ADDRESS: ${MAIL_SENDER_ADDRESS:-no-reply@{{ org_domain }}}
       MAIL_BASE_URL: ${MAIL_BASE_URL:-http://localhost:8080}
 {%- endif %}
-{%- if caching == 'redis' %}
       REDIS_URL: redis://redis:6379
-{%- endif %}
 {%- if eventing == 'kafka-redpanda' %}
       KAFKA_BROKERS: redpanda:9092
 {%- endif %}
@@ -82,10 +78,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-{%- if caching == 'redis' %}
       redis:
         condition: service_healthy
-{%- endif %}
 {%- if eventing == 'kafka-redpanda' %}
       redpanda:
         condition: service_healthy

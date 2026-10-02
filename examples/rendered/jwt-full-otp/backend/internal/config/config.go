@@ -51,9 +51,9 @@ type RedisConfig struct {
 }
 
 // RateLimitConfig drives the global per-IP floor (internal/ratelimit). It is
-// always generated whenever auth != 'none' (rate limiting is default-on
-// infra), but the floor itself defaults OFF: an undeclared blanket limit is a
-// production surprise, unlike per-operation x-rate-limit rules, which are
+// always generated (rate limiting is default-on infra, like observability and
+// Postgres), but the floor itself defaults OFF: an undeclared blanket limit is
+// a production surprise, unlike per-operation x-rate-limit rules, which are
 // explicit and spec-declared.
 type RateLimitConfig struct {
 	GlobalEnabled  bool   `yaml:"global_enabled"`

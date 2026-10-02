@@ -152,19 +152,6 @@ verification_method:
   default: otp
   when: "{{ auth == 'jwt' }}"
 
-caching:
-  type: str
-  help: Request-time caching layer
-  choices:
-    "None": none
-    "Redis": redis
-  default: redis
-  validator: >-
-    {% if auth != 'none' and caching == 'none' %}
-    Rate limiting (default-on whenever auth != 'none') is Redis-backed and needs
-    shared counters across instances to mean anything — set caching to Redis.
-    {% endif %}
-
 eventing:
   type: str
   help: Event publishing

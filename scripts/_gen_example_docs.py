@@ -24,7 +24,6 @@ COLUMN_ORDER = [
     "include_example_domain",
     "auth",
     "verification_method",
-    "caching",
     "eventing",
     "payments",
     "push_notifications",

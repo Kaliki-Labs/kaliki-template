@@ -46,10 +46,10 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
-      # Rate limiting (internal/ratelimit) is Redis-backed and default-on
-      # whenever auth != 'none' (docs/adr/0001-...), so auth's test suite
-      # needs a real Redis to exercise real 429s end-to-end. Matches the port
-      # docker-compose-test.yaml.jinja's gated redis service uses locally.
+      # Redis is unconditional infra (internal/ratelimit, internal/cache —
+      # docs/adr/0001-redis-and-rate-limiting-are-unconditional-infra.md),
+      # generated in every profile including minimal. Matches the port
+      # docker-compose-test.yaml.jinja's redis service uses locally.
       redis:
         image: redis:7-alpine
         ports:

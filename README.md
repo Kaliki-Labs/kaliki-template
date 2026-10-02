@@ -25,9 +25,9 @@ uvx copier copy . ../my-app
 ```
 
 You'll be prompted for identity (name, Go module path, bundle id, db name) and
-module choices (auth, verification method, caching, eventing, payments,
-push, object storage, example domain). Observability is always included with a
-no-op default.
+module choices (auth, verification method, eventing, payments,
+push, object storage, example domain). Observability, Postgres, Redis and rate
+limiting are always included (the last with a no-op/off-by-default global floor).
 
 ## What you get
 
@@ -38,8 +38,8 @@ no-op default.
 - **API** — OpenAPI specs as the contract source of truth.
 - **Frontend** — Flutter (Riverpod + GoRouter) with a working auth flow and
   local widgets.
-- **Docker** — `docker compose up --build` brings up postgres (+redis/redpanda/
-  mailpit per flags) and the backend together.
+- **Docker** — `docker compose up --build` brings up postgres + redis
+  (+redpanda/mailpit per flags) and the backend together.
 
 ## Test the template
 
@@ -64,7 +64,9 @@ verified end-to-end (see `test-template.sh` / `.github/workflows/template-ci.yml
       `MAIL_PROVIDER`; Mailpit in the local stack; `verification_method` flag
       (OTP code vs token link). Credentials are emailed/logged, never returned
       in API responses
-- [x] Tier-2 modules: caching (redis), eventing (kafka + outbox), payments,
+- [x] Redis + rate limiting (global per-IP floor + per-operation `x-rate-limit`)
+      always generated, same tier as Postgres/observability
+- [x] Tier-2 modules: eventing (kafka + outbox), payments,
       push, object storage — integration points, gated by flags
 - [x] transactional outbox relay worker (`cmd/workers`) for eventing
 - [x] frontend auth flow: secure token storage, refresh interceptor, Riverpod

@@ -21,7 +21,6 @@ answers:
   include_example_domain: true
   auth: jwt
   verification_method: otp
-  caching: redis
   eventing: none
   payments: none
   push_notifications: none

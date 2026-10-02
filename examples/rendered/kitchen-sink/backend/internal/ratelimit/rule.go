@@ -1,7 +1,7 @@
 // Package ratelimit implements token-bucket rate limiting (Redis-backed via
 // GCRA) declared per-operation through the OpenAPI `x-rate-limit` vendor
 // extension, plus a separately-gated global per-IP floor. See CONTEXT.md and
-// docs/adr/0001-rate-limiting-forces-redis-and-is-default-on.md for the design.
+// docs/adr/0001-redis-and-rate-limiting-are-unconditional-infra.md for the design.
 package ratelimit
 
 import (

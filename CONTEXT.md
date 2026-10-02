@@ -18,7 +18,7 @@ x-rate-limit:
 ```
 Per-operation `x-rate-limit` rules are always active (explicit, spec-declared, reviewed in PRs) and **stack** with the global per-IP floor when that floor is enabled — they don't replace it.
 
-**Global per-IP floor** (#26) — a baseline IP-scoped limiter applied to every route, independent of any operation's `x-rate-limit`. The code is always generated (rate-limiting infra is default-on whenever `auth != 'none'`, forcing `caching == 'redis'`), but the floor itself is gated by a runtime config flag (e.g. `RATE_LIMIT_GLOBAL_ENABLED`), **default off** — an undeclared blanket limit is a production surprise; per-operation rules are where real intent is expressed.
+**Global per-IP floor** (#26) — a baseline IP-scoped limiter applied to every route, independent of any operation's `x-rate-limit`. The code is always generated — rate limiting (and the Redis it's backed by) is unconditional infrastructure in every generated project, the same tier as Postgres and OpenTelemetry, independent of `auth`/`caching`/`include_example_domain` (there is no `caching` flag — Redis is just always there). The floor itself is gated by a runtime config flag (e.g. `RATE_LIMIT_GLOBAL_ENABLED`), **default off** — an undeclared blanket limit is a production surprise; per-operation rules are where real intent is expressed.
 
 **Token bucket** — the rate-limiting algorithm used throughout (steady refill rate + burst allowance), as opposed to fixed-window or sliding-window-log. Chosen for compatibility with Redis GCRA implementations and to avoid fixed-window boundary bursts. No progressive/escalating lockout in the template — flat limits only; projects needing escalation implement it themselves.
 

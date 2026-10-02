@@ -89,7 +89,7 @@ type by adding a template + a typed `Send*` method on the mailer.
 ### Local development
 
 ```sh
-docker compose -f docker-compose.services.yml up -d   # postgres{% if caching == 'redis' %} + redis{% endif %} + mailpit
+docker compose -f docker-compose.services.yml up -d   # postgres + redis + mailpit
 cd backend && go run ./cmd/server
 ```
 Open http://localhost:8025 to read the verification / reset emails.
@@ -99,8 +99,8 @@ Open http://localhost:8025 to read the verification / reset emails.
 These are wired as integration points (client init + config), not full business
 logic — extend them for your product:
 
-{% if caching == 'redis' %}- `internal/cache` — Redis client (request-time caching).
-{% endif %}{% if eventing == 'kafka-redpanda' %}- `internal/events` — Kafka/Redpanda publisher. Use the `outbox` table for
+- `internal/cache` — Redis client (request-time caching).
+{% if eventing == 'kafka-redpanda' %}- `internal/events` — Kafka/Redpanda publisher. Use the `outbox` table for
   transactional, at-least-once delivery (write events in the same tx as the
   domain change, then relay rows where `published_at IS NULL`).
 {% endif %}{% if payments == 'razorpay' %}- `internal/payments` — Razorpay client. Add orders/webhooks/subscriptions.

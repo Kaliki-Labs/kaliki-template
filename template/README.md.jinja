@@ -14,7 +14,7 @@ curl localhost:8080/api/v1/items
 {%- endif %}
 ```
 
-Postgres{% if caching == 'redis' %}, Redis{% endif %}{% if eventing == 'kafka-redpanda' %}, Redpanda{% endif %} and the backend all come up together. Schema migrations run automatically on backend startup.
+Postgres, Redis{% if eventing == 'kafka-redpanda' %}, Redpanda{% endif %} and the backend all come up together. Schema migrations run automatically on backend startup.
 
 ## Layout
 
