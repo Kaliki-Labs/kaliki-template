@@ -41,12 +41,25 @@ type Config struct {
 	Database      DatabaseConfig      `yaml:"database"`
 	Observability ObservabilityConfig `yaml:"observability"`
 	Token         TokenConfig         `yaml:"token"`
+	RateLimit     RateLimitConfig     `yaml:"rate_limit"`
 	Mail          MailConfig          `yaml:"mail"`
 	Redis         RedisConfig         `yaml:"redis"`
 }
 
 type RedisConfig struct {
 	URL string `yaml:"url"`
+}
+
+// RateLimitConfig drives the global per-IP floor (internal/ratelimit). It is
+// always generated whenever auth != 'none' (rate limiting is default-on
+// infra), but the floor itself defaults OFF: an undeclared blanket limit is a
+// production surprise, unlike per-operation x-rate-limit rules, which are
+// explicit and spec-declared.
+type RateLimitConfig struct {
+	GlobalEnabled  bool   `yaml:"global_enabled"`
+	GlobalRequests int    `yaml:"global_requests"`
+	GlobalWindow   string `yaml:"global_window"`
+	GlobalBurst    int    `yaml:"global_burst"`
 }
 
 // TokenConfig holds JWT signing settings (used by the auth module).
@@ -92,6 +105,14 @@ func envOverrideInt(dst *int, key string) {
 	}
 }
 
+func envOverrideBool(dst *bool, key string) {
+	if v := os.Getenv(key); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			*dst = b
+		}
+	}
+}
+
 // Load reads the YAML at path, then applies env overrides for anything that is
 // commonly injected by the deployment environment.
 func Load(path string) (*Config, error) {
@@ -99,6 +120,7 @@ func Load(path string) (*Config, error) {
 		Server:        ServerConfig{Port: "8080"},
 		Observability: ObservabilityConfig{ServiceName: "backend"},
 		Token:         TokenConfig{ExpiryHours: 1, RefreshExpiryHours: 720},
+		RateLimit:     RateLimitConfig{GlobalEnabled: false, GlobalRequests: 100, GlobalWindow: "60s", GlobalBurst: 20},
 	}
 
 	if b, err := os.ReadFile(path); err == nil {
@@ -111,6 +133,10 @@ func Load(path string) (*Config, error) {
 	envOverride(&cfg.Database.URL, "DATABASE_URL")
 	envOverride(&cfg.Observability.Endpoint, "OTEL_EXPORTER_OTLP_ENDPOINT")
 	envOverride(&cfg.Token.Secret, "JWT_SECRET")
+	envOverrideBool(&cfg.RateLimit.GlobalEnabled, "RATE_LIMIT_GLOBAL_ENABLED")
+	envOverrideInt(&cfg.RateLimit.GlobalRequests, "RATE_LIMIT_GLOBAL_REQUESTS")
+	envOverride(&cfg.RateLimit.GlobalWindow, "RATE_LIMIT_GLOBAL_WINDOW")
+	envOverrideInt(&cfg.RateLimit.GlobalBurst, "RATE_LIMIT_GLOBAL_BURST")
 	envOverride(&cfg.Mail.Provider, "MAIL_PROVIDER")
 	envOverride(&cfg.Mail.SenderAddress, "MAIL_SENDER_ADDRESS")
 	envOverride(&cfg.Mail.BaseURL, "MAIL_BASE_URL")

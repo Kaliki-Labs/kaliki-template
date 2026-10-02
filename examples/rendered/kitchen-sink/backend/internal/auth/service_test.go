@@ -77,14 +77,11 @@ func TestSignup(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	signup := func() {
-		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"u@b.com","password":"Password123!"}`)
-	}
-
 	t.Run("success", func(t *testing.T) {
 		setupTest(t)
-		signup()
+		// signupSession verifies the account (#14: Login now rejects
+		// unverified users), which also conveniently sets the password.
+		signupSession(t, "u@b.com")
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
 			`{"email":"u@b.com","password":"Password123!"}`)
@@ -98,7 +95,7 @@ func TestLogin(t *testing.T) {
 
 	t.Run("authorization", func(t *testing.T) {
 		setupTest(t)
-		signup()
+		signupSession(t, "u@b.com")
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
 			`{"email":"u@b.com","password":"wrongpass"}`)
@@ -126,6 +123,20 @@ func signupSession(t *testing.T, email string) (string, string) {
 		t.Fatalf("signup status = %d (%s)", w.Code, w.Body.String())
 	}
 	b := decode(t, w.Body.Bytes())
+	// Signup already returns a session here (token mode issues one
+	// unconditionally, even pre-verification), but Login/RefreshToken now
+	// reject unverified accounts (#14) — verify via the emailed token so
+	// callers of signupSession get a session later endpoints will accept.
+	credential := mailer.verifications[email]
+	if credential == "" {
+		t.Fatalf("no verification credential captured for %s", email)
+	}
+	vw := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/verify",
+		`{"token":"`+credential+`"}`)
+	if vw.Code != http.StatusOK {
+		t.Fatalf("verify status = %d (%s)", vw.Code, vw.Body.String())
+	}
+	b = decode(t, vw.Body.Bytes())
 	return b["token"].(string), b["refresh_token"].(string)
 }
 
@@ -247,8 +258,16 @@ func TestConfirmPasswordReset(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		setupTest(t)
 
-		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		signupResp := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
 			`{"email":"r@b.com","password":"Password123!"}`)
+		// Login's new #14 verified-check (below) requires a verified account.
+		_ = signupResp
+		vw := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/verify",
+			`{"token":"`+mailer.verifications["r@b.com"]+`"}`)
+		if vw.Code != http.StatusOK {
+			t.Fatalf("verify status = %d, want 200 (%s)", vw.Code, vw.Body.String())
+		}
+
 		req := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/password-reset/request",
 			`{"email":"r@b.com"}`)
 		if req.Code != http.StatusOK {
@@ -280,4 +299,90 @@ func TestConfirmPasswordReset(t *testing.T) {
 			t.Fatalf("status = %d, want 400", w.Code)
 		}
 	})
+}
+
+// #14: unverified users never get a session from Login or RefreshToken.
+
+func TestLoginUnverifiedUser(t *testing.T) {
+	setupTest(t)
+	testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"unverified@b.com","password":"Password123!"}`)
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"unverified@b.com","password":"Password123!"}`)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 (%s)", w.Code, w.Body.String())
+	}
+	body := decode(t, w.Body.Bytes())
+	if body["error"] != "email_not_verified" {
+		t.Fatalf("error = %v, want email_not_verified", body["error"])
+	}
+}
+
+func TestRefreshTokenUnverifiedUser(t *testing.T) {
+	setupTest(t)
+	// Token mode: Signup issues a session unconditionally even though the
+	// account is unverified (see CONTEXT.md / the #14 judgment calls) — so an
+	// unverified user can hold a refresh token, which RefreshToken must still
+	// refuse.
+	signupResp := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"unverified2@b.com","password":"Password123!"}`)
+	if signupResp.Code != http.StatusCreated {
+		t.Fatalf("signup status = %d (%s)", signupResp.Code, signupResp.Body.String())
+	}
+	refresh, ok := decode(t, signupResp.Body.Bytes())["refresh_token"].(string)
+	if !ok || refresh == "" {
+		t.Fatal("expected signup to issue a refresh token in token mode")
+	}
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/refresh",
+		`{"refresh_token":"`+refresh+`"}`)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 (%s)", w.Code, w.Body.String())
+	}
+	if decode(t, w.Body.Bytes())["error"] != "email_not_verified" {
+		t.Fatalf("expected email_not_verified error, got %s", w.Body.String())
+	}
+}
+
+// Rate limiting (#15, #26): end-to-end proof, through a real gin.Engine +
+// ratelimit.Limiter backed by real Redis (docker/docker-compose-test.yaml),
+// that the x-rate-limit declared on /auth/login in auth.yaml actually trips a
+// 429, and that it does not bleed into an operation with no x-rate-limit of
+// its own.
+
+func TestLoginRateLimited(t *testing.T) {
+	setupTest(t)
+	email := "ratelimit-login@b.com"
+	testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"`+email+`","password":"Password123!"}`)
+
+	// login's x-rate-limit (scope: identifier, key: email) is requests=5,
+	// burst=2 -> 7 requests allowed before the bucket is exhausted. A wrong
+	// password still consumes a token (PerOperation runs before the handler),
+	// so hammering with bad credentials drives the bucket to zero
+	// deterministically without needing the real password.
+	for i := 0; i < 7; i++ {
+		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+			`{"email":"`+email+`","password":"wrong"}`)
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("request %d: unexpectedly rate limited within burst (status %d)", i, w.Code)
+		}
+	}
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"`+email+`","password":"wrong"}`)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429 once the burst is exhausted (%s)", w.Code, w.Body.String())
+	}
+	if w.Header().Get("Retry-After") == "" {
+		t.Fatal("expected a Retry-After header on a 429 response")
+	}
+
+	// A non-rate-limited operation must never 429, even while /auth/login is
+	// throttled for the same caller.
+	me := testsupport.DoJSON(router, http.MethodGet, "/api/v1/auth/me", "")
+	if me.Code == http.StatusTooManyRequests {
+		t.Fatal("/auth/me must not be rate limited by /auth/login's bucket")
+	}
 }

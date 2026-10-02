@@ -7,3 +7,8 @@ output: schema.gen.go
 output-options:
   name-normalizer: ToCamelCase
   nullable-type: true
+{%- if auth != 'none' %}
+  user-templates:
+    gin/gin-register.tmpl: ../_shared_templates/gin-register.tmpl
+    gin/gin-wrappers.tmpl: ../_shared_templates/gin-wrappers.tmpl
+{%- endif %}

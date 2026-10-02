@@ -34,6 +34,12 @@ func DatabaseURL() string {
 		"postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable")
 }
 
+// RedisURL is the test Redis DSN (docker/docker-compose-test.yaml's redis
+// service). Override with TEST_REDIS_URL in CI.
+func RedisURL() string {
+	return getenv("TEST_REDIS_URL", "redis://localhost:26379")
+}
+
 // Connect creates (if needed) an isolated schema, routes the pool to it, and
 // applies migrations. Call once from TestMain with a package-unique schema name.
 func Connect(schema string) *TestDB {

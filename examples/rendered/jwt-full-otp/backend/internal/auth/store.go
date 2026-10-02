@@ -38,8 +38,8 @@ type Store interface {
 	UpdateUserPassword(ctx context.Context, id uuid.UUID, passwordHash string) error
 	// CreateAuthToken — sql/queries/auth.sql
 	CreateAuthToken(ctx context.Context, arg database.CreateAuthTokenParams) (database.AuthToken, error)
-	// GetLatestAuthToken — sql/queries/auth.sql (2 params -> positional)
-	GetLatestAuthToken(ctx context.Context, userID uuid.UUID, kind string) (database.AuthToken, error)
+	// IncrementAuthTokenAttempts — sql/queries/auth.sql (2 params -> positional)
+	IncrementAuthTokenAttempts(ctx context.Context, userID uuid.UUID, kind string) (database.AuthToken, error)
 	// MarkAuthTokenUsed — sql/queries/auth.sql
 	MarkAuthTokenUsed(ctx context.Context, id uuid.UUID) error
 }

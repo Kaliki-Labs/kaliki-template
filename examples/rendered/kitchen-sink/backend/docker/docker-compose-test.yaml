@@ -16,3 +16,17 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  # Rate limiting (internal/ratelimit) is Redis-backed and default-on whenever
+  # auth != 'none' (see docs/adr/0001-...), so service_test.go.jinja needs a
+  # real Redis to exercise real 429s end-to-end. Distinct port from the main
+  # docker-compose.services.yml redis service so both can run concurrently.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "26379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

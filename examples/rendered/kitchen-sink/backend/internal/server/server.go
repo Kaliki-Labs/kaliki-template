@@ -24,6 +24,8 @@ import (
 	"github.com/example/kitchen-sink-app/backend/internal/items"
 	"github.com/example/kitchen-sink-app/backend/internal/auth"
 	"github.com/example/kitchen-sink-app/backend/internal/mail"
+	items_gen "github.com/example/kitchen-sink-app/backend/gen/api/items"
+	"github.com/example/kitchen-sink-app/backend/internal/ratelimit"
 	"github.com/example/kitchen-sink-app/backend/internal/cache"
 	"github.com/example/kitchen-sink-app/backend/internal/events"
 	"github.com/example/kitchen-sink-app/backend/internal/payments"
@@ -76,6 +78,8 @@ func Run() {
 	}
 	defer redisCache.Close()
 
+	rl := ratelimit.New(redisCache.Client, map[string]ratelimit.KeyExtractor{})
+
 	publisher := events.NewPublisher(cfg.Kafka)
 	defer publisher.Close()
 
@@ -97,11 +101,23 @@ func Run() {
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.Use(otelgin.Middleware(cfg.Observability.ServiceName))
+	if cfg.RateLimit.GlobalEnabled {
+		window, err := time.ParseDuration(cfg.RateLimit.GlobalWindow)
+		if err != nil {
+			log.Fatalf("rate limit: invalid RATE_LIMIT_GLOBAL_WINDOW %q: %v", cfg.RateLimit.GlobalWindow, err)
+		}
+		r.Use(rl.GlobalFloor(ratelimit.Rule{
+			Scope:    "ip",
+			Requests: cfg.RateLimit.GlobalRequests,
+			Window:   window,
+			Burst:    cfg.RateLimit.GlobalBurst,
+		}))
+	}
 	health.New().Register(r)
 	api := r.Group("/api/v1")
-	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail))
+	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail), rl)
 	authSvc.Register(api)
-	items.New(pool).Register(api, authSvc.ScopeAuth())
+	items.New(pool).Register(api, authSvc.ScopeAuth(), rl.PerOperation(items_gen.RateLimitRule))
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

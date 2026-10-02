@@ -7,6 +7,11 @@ paths:
     post:
       operationId: signup
       tags: [auth]
+      x-rate-limit:
+        scope: ip
+        requests: 20
+        window: 60s
+        burst: 10
       requestBody:
         required: true
         content:
@@ -30,6 +35,12 @@ paths:
     post:
       operationId: login
       tags: [auth]
+      x-rate-limit:
+        scope: identifier
+        key: email
+        requests: 5
+        window: 60s
+        burst: 2
       requestBody:
         required: true
         content:
@@ -97,6 +108,23 @@ paths:
     post:
       operationId: verifyEmail
       tags: [auth]
+      # Scoped to the credential being verified, not the account's email:
+      # VerifyRequest's body carries verification_token (OTP mode) or token
+      # (token-link mode) but never an email field, so "identifier/email"
+      # would silently fall back to IP-scoping for every call (see the
+      # fallback-to-IP judgment call in the rate limiting ADR) — correct but
+      # coarser than intended, and it throttles every verify attempt behind a
+      # shared IP together instead of per attempt.
+      x-rate-limit:
+        scope: identifier
+{%- if verification_method == 'otp' %}
+        key: verification_token
+{%- else %}
+        key: token
+{%- endif %}
+        requests: 5
+        window: 60s
+        burst: 2
       requestBody:
         required: true
         content:
@@ -112,6 +140,39 @@ paths:
                 $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Invalid or expired token
+{%- if verification_method == 'otp' %}
+  /auth/verify/resend:
+    post:
+      operationId: resendVerification
+      tags: [auth]
+      # Hard cooldown: at most one resend per window, no burst. This is a
+      # stricter, dedicated rule (not shared with verifyEmail's own
+      # x-rate-limit above) because resend abuse is an email-bombing vector,
+      # not just a brute-force one.
+      x-rate-limit:
+        scope: identifier
+        key: email
+        requests: 1
+        window: 60s
+        burst: 0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendVerificationRequest"
+      responses:
+        "201":
+          description: >-
+            A fresh verification credential was issued and emailed (same
+            shape as the unverified branch of /auth/signup).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupResponse"
+        "400":
+          description: No such account, or already verified
+{%- endif %}
   /auth/password-reset/request:
     post:
       operationId: requestPasswordReset
@@ -196,6 +257,13 @@ components:
             Short-lived token identifying the just-created (unverified) account.
             Submit it with the emailed OTP to POST /auth/verify to obtain a
             session. No access/refresh token is issued until the email is verified.
+    ResendVerificationRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
 {%- endif %}
     RefreshRequest:
       type: object

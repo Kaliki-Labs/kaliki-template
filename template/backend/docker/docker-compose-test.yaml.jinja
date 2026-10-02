@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: test_db
+    ports:
+      - "25432:5432"
+    command: >
+      postgres -c max_connections=1000 -c shared_buffers=128MB
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+{%- if auth != 'none' %}
+
+  # Rate limiting (internal/ratelimit) is Redis-backed and default-on whenever
+  # auth != 'none' (see docs/adr/0001-...), so service_test.go.jinja needs a
+  # real Redis to exercise real 429s end-to-end. Distinct port from the main
+  # docker-compose.services.yml redis service so both can run concurrently.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "26379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+{%- endif %}
