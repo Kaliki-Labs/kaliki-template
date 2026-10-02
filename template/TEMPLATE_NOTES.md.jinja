@@ -204,9 +204,22 @@ The Flutter app ships a working auth flow as a reference:
   intentionally **no shared_ui package**: extract one into its own repo only
   once a second app needs to share it.
 
-After changing the API, run `scripts/regenerate-api-client.sh`, then
-`dart run build_runner build --delete-conflicting-outputs` in `frontend/` to
-regenerate the Riverpod `.g.dart` files.
+`frontend/` and `packages/shared_api_client/` are members of one Dart pub
+workspace (declared in the project's root `pubspec.yaml`, managed with
+[Melos](https://melos.invertase.dev)) rather than two independently-resolved
+packages. This exists so build_runner's codegen pipeline is compiled once and
+reused across both packages instead of once per package — a fixed ~11-15s
+cost otherwise paid twice. Adding a future package (e.g. a shared `shared_ui`
+design-system package) is a one-line addition to the `workspace:` list in the
+root `pubspec.yaml` and the `melos.packages` glob.
+
+After changing the API, run `make generate` (or `bash
+scripts/regenerate-api-client.sh && dart run melos bootstrap && dart run
+build_runner build --workspace --delete-conflicting-outputs` directly) to
+rebuild the OpenAPI client and regenerate the Riverpod `.g.dart` files
+together. If you edit a package's `pubspec.yaml` by hand (e.g. adding a
+dependency), run `dart run melos bootstrap` afterwards to keep the workspace's
+shared dependency resolution in sync.
 
 The API client is generated with a [fork of swagger_parser]({{ '' }}https://github.com/tejesh-kaliki/swagger_parser)
 that supports `x-dart-type` / `x-dart-import`. Use them to map OpenAPI

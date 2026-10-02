@@ -2,9 +2,13 @@ name: kitchen_sink_app
 description: Kitchen Sink App Flutter app
 publish_to: "none"
 version: 0.1.0+1
+# Member of the Dart pub workspace rooted at the project root pubspec.yaml.
+# `flutter create` (run post-generation) leaves an existing pubspec.yaml
+# alone, so this field survives — verified empirically, not just assumed.
+resolution: workspace
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ">=3.9.0 <4.0.0"
 
 dependencies:
   flutter:

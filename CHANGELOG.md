@@ -18,6 +18,17 @@ Versions are git tags; `copier update` upgrades a generated project between them
   pre-commit.
 
 ### Changed (breaking for `copier update`)
+- **`frontend/` and `packages/shared_api_client/` are now one Dart pub
+  workspace**, managed with [Melos](https://melos.invertase.dev). A new root
+  `pubspec.yaml` declares the workspace; both packages resolve against one
+  shared `.dart_tool/` and there's a single `pubspec.lock` at the project root
+  instead of one per package. Post-generation codegen now runs `dart run melos
+  bootstrap` + one `dart run build_runner build --workspace` instead of two
+  separate `build_runner` invocations, roughly halving build_runner's
+  per-render fixed compile cost. Local dev: use `make generate` after editing
+  `api/services/*.yaml` (`scripts/regenerate-api-client.sh` no longer runs
+  `build_runner` itself). After `copier update`, run `dart run melos
+  bootstrap` once to adopt the workspace in an existing checkout.
 - **OTP signup no longer starts a session** (`auth=jwt-full`, OTP method). Signup
   returns a short-lived `verification_token` (`SignupResponse`) instead of an
   access/refresh pair; the token is redeemed with the emailed code at
