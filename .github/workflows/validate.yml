@@ -46,6 +46,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # Rate limiting (internal/ratelimit) is Redis-backed and default-on
+      # whenever auth != 'none' (docs/adr/0001-...), so auth's test suite
+      # needs a real Redis to exercise real 429s end-to-end. Matches the port
+      # docker-compose-test.yaml.jinja's gated redis service uses locally.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 26379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable
     steps:
