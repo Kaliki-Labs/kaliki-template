@@ -16,13 +16,10 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
-{%- if auth != 'none' %}
 
-  # internal/ratelimit's own unit tests use miniredis (no real Redis needed),
-  # but auth's service_test.go.jinja exercises real 429s end-to-end against a
-  # live Redis, hence this is still scoped to auth != 'none'. Distinct port
-  # from the main docker-compose.services.yml redis service so both can run
-  # concurrently.
+  # Redis is unconditional infra (internal/ratelimit, internal/cache), same as
+  # postgres above. Distinct port from the main docker-compose.services.yml
+  # redis service so both can run concurrently.
   redis:
     image: redis:7-alpine
     ports:
@@ -32,4 +29,3 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
-{%- endif %}
