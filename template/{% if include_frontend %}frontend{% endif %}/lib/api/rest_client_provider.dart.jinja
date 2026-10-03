@@ -15,7 +15,8 @@ const apiBaseUrl = String.fromEnvironment(
 );
 
 @Riverpod(keepAlive: true)
-TokenStorage tokenStorage(Ref ref) => TokenStorage(const FlutterSecureStorage());
+TokenStorage tokenStorage(Ref ref) =>
+    TokenStorage(const FlutterSecureStorage());
 
 /// Attaches the access token and transparently refreshes it once on a 401.
 class _AuthInterceptor extends QueuedInterceptor {
@@ -62,7 +63,7 @@ class _AuthInterceptor extends QueuedInterceptor {
         ..headers['X-Auth-Retry'] = 'true';
       final retried = await _dio.fetch<dynamic>(opts);
       return handler.resolve(retried);
-    } catch (_) {
+    } on Exception catch (_) {
       await storage.clear();
       return handler.next(err);
     }
@@ -82,7 +83,8 @@ Dio dio(Ref ref) {
 }
 
 @Riverpod(keepAlive: true)
-RestClient restClient(Ref ref) => RestClient(ref.watch(dioProvider), baseUrl: apiBaseUrl);
+RestClient restClient(Ref ref) =>
+    RestClient(ref.watch(dioProvider), baseUrl: apiBaseUrl);
 
 @riverpod
 AuthClient authClient(Ref ref) => ref.watch(restClientProvider).auth;

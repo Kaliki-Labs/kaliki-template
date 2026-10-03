@@ -7,7 +7,8 @@ import '../api/rest_client_provider.dart';
 import '../auth/auth_controller.dart';
 
 /// Loads the example `items` from the API. Invalidate it to refresh the list.
-final itemsListProvider = FutureProvider.autoDispose<List<Item>>((ref) async {
+final FutureProvider<List<Item>> itemsListProvider =
+    FutureProvider.autoDispose<List<Item>>((ref) async {
   final result = await ref.read(itemsClientProvider).listItems();
   return result.items;
 });
@@ -27,9 +28,6 @@ class HomeScreen extends ConsumerWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Column(
-          // min when it is just the status line; the items list below needs
-          // Expanded, which requires the column to fill the available height.
-          mainAxisSize: MainAxisSize.max,
           children: [
             const SizedBox(height: 24),
             const Icon(Icons.check_circle_outline, size: 48),
@@ -109,7 +107,7 @@ class _AddItemFieldState extends ConsumerState<_AddItemField> {
           .createItem(body: CreateItemRequest(name: name));
       _controller.clear();
       ref.invalidate(itemsListProvider);
-    } catch (_) {
+    } on Exception catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not add item.')),

@@ -15,7 +15,7 @@ class AuthController extends _$AuthController {
     if (token == null) return null;
     try {
       return await ref.read(authClientProvider).getCurrentUser();
-    } catch (_) {
+    } on Exception catch (_) {
       await ref.read(tokenStorageProvider).clear();
       return null;
     }
@@ -51,7 +51,7 @@ class AuthController extends _$AuthController {
         await ref.read(authClientProvider).logout(
               body: RefreshRequest(refreshToken: refresh),
             );
-      } catch (_) {
+      } on Exception catch (_) {
         // Best effort; clear locally regardless.
       }
     }
