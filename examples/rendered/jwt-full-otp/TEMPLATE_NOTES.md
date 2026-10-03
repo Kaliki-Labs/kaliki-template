@@ -8,7 +8,8 @@ the wiring conventions so you can extend it cleanly.
 A domain touches a fixed set of places. To add `widgets`:
 
 1. `api/services/widgets.yaml` — define the contract first.
-2. `backend/internal/widgets/{service,store}.go` — handler + data access.
+2. `backend/internal/widgets/{service,store}.go` — handler + data access. Scaffold
+   its `setup_test.go` + `service_test.go` with `scripts/new-domain.sh widgets`.
 3. `backend/sql/schema/00NN_widgets.sql` — goose-style migration.
 4. `backend/internal/server/server.go` — register routes:
    `widgets.New(db).Register(api)`.
