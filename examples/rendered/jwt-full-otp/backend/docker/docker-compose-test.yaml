@@ -16,3 +16,16 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  # Redis is unconditional infra (internal/ratelimit, internal/cache), same as
+  # postgres above. Distinct port from the main docker-compose.services.yml
+  # redis service so both can run concurrently.
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "26379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

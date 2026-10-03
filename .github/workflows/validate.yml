@@ -46,6 +46,17 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
+      # Redis is unconditional infra (internal/ratelimit, internal/cache —
+      # docs/adr/0001-redis-and-rate-limiting-are-unconditional-infra.md),
+      # generated in every profile including minimal. Matches the port
+      # docker-compose-test.yaml.jinja's redis service uses locally.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 26379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable
     steps:

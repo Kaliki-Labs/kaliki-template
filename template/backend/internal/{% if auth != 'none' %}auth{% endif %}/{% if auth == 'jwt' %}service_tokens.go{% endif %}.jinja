@@ -82,6 +82,50 @@ func (s *Service) VerifyEmail(c *gin.Context) {
 	}
 	s.respondWithSession(c, http.StatusOK, verifiedUser)
 }
+{%- if verification_method == 'otp' %}
+
+// ResendVerification implements gen.ServerInterface. Issues a fresh
+// verification credential for an unverified account, same
+// issueVerification/sendVerification pattern as Signup's unverified branch,
+// and returns the same SignupResponse shape (a new verification_token paired
+// with the freshly emailed OTP). Hard-rate-limited (x-rate-limit: 1/60s, no
+// burst) at the spec level — this is a resend/email-bombing vector, not just
+// a brute-force one.
+func (s *Service) ResendVerification(c *gin.Context) {
+	var body gen.ResendVerificationJSONRequestBody
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := s.store.GetUserByEmail(c.Request.Context(), string(body.Email))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no such account"})
+		return
+	}
+	if user.Verified {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "already verified"})
+		return
+	}
+
+	credential, err := s.issueVerification(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not issue verification"})
+		return
+	}
+	s.sendVerification(c.Request.Context(), user.Email, credential)
+
+	verificationToken, err := s.tokens.IssueVerification(user.ID.String())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not issue verification token"})
+		return
+	}
+	c.JSON(http.StatusCreated, gen.SignupResponse{
+		User:              toAPIUser(user),
+		VerificationToken: verificationToken,
+	})
+}
+{%- endif %}
 
 // RequestPasswordReset implements gen.ServerInterface. Always returns 200 so
 // callers cannot probe which emails exist; the reset credential is emailed.
@@ -181,10 +225,12 @@ func (s *Service) sendReset(ctx context.Context, to, credential string) {
 }
 
 {% if verification_method == 'otp' -%}
-// consume looks up the latest live credential for the user/kind and compares it
-// to the supplied code in constant time.
+// consume atomically claims an attempt against the latest live credential for
+// the user/kind (capped at 5 attempts; see IncrementAuthTokenAttempts), then
+// compares it to the supplied code in constant time. No eligible row — expired,
+// already used, or attempts exhausted — surfaces identically as "not found".
 func (s *Service) consume(ctx context.Context, userID uuid.UUID, kind, code string) (database.AuthToken, error) {
-	tok, err := s.store.GetLatestAuthToken(ctx, userID, kind)
+	tok, err := s.store.IncrementAuthTokenAttempts(ctx, userID, kind)
 	if err != nil {
 		return database.AuthToken{}, errors.New("not found")
 	}

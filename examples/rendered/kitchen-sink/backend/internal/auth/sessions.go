@@ -67,6 +67,12 @@ func (s *Service) RefreshToken(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
 		return
 	}
+	if !user.Verified {
+		// #14: refresh isn't a verification-prompt moment (unlike Login), so no
+		// fresh credential is reissued here — just refuse the session.
+		c.JSON(http.StatusForbidden, gin.H{"error": "email_not_verified"})
+		return
+	}
 	s.respondWithSession(c, http.StatusOK, user)
 }
 

@@ -39,8 +39,8 @@ type Store interface {
 	// CreateAuthToken — sql/queries/auth.sql
 	CreateAuthToken(ctx context.Context, arg database.CreateAuthTokenParams) (database.AuthToken, error)
 {%- if verification_method == 'otp' %}
-	// GetLatestAuthToken — sql/queries/auth.sql (2 params -> positional)
-	GetLatestAuthToken(ctx context.Context, userID uuid.UUID, kind string) (database.AuthToken, error)
+	// IncrementAuthTokenAttempts — sql/queries/auth.sql (2 params -> positional)
+	IncrementAuthTokenAttempts(ctx context.Context, userID uuid.UUID, kind string) (database.AuthToken, error)
 {%- else %}
 	// GetAuthToken — sql/queries/auth.sql (2 params -> positional)
 	GetAuthToken(ctx context.Context, tokenHash string, kind string) (database.AuthToken, error)

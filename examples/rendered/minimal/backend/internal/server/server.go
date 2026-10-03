@@ -18,6 +18,8 @@ import (
 	"github.com/example/minimal-app/backend/internal/config"
 	"github.com/example/minimal-app/backend/internal/health"
 	"github.com/example/minimal-app/backend/internal/observability"
+	"github.com/example/minimal-app/backend/internal/ratelimit"
+	"github.com/example/minimal-app/backend/internal/cache"
 )
 
 func Run() {
@@ -35,9 +37,29 @@ func Run() {
 	obs := observability.Init(cfg.Observability.ServiceName, cfg.Observability.Endpoint)
 	defer obs.Shutdown()
 
+	redisCache, err := cache.Connect(ctx, cfg.Redis)
+	if err != nil {
+		log.Fatalf("redis: %v", err)
+	}
+	defer redisCache.Close()
+
+	rl := ratelimit.New(redisCache.Client, map[string]ratelimit.KeyExtractor{})
+
 	r := gin.Default()
 	r.Use(corsMiddleware())
 	r.Use(otelgin.Middleware(cfg.Observability.ServiceName))
+	if cfg.RateLimit.GlobalEnabled {
+		window, err := time.ParseDuration(cfg.RateLimit.GlobalWindow)
+		if err != nil {
+			log.Fatalf("rate limit: invalid RATE_LIMIT_GLOBAL_WINDOW %q: %v", cfg.RateLimit.GlobalWindow, err)
+		}
+		r.Use(rl.GlobalFloor(ratelimit.Rule{
+			Scope:    "ip",
+			Requests: cfg.RateLimit.GlobalRequests,
+			Window:   window,
+			Burst:    cfg.RateLimit.GlobalBurst,
+		}))
+	}
 	health.New().Register(r)
 
 	srv := &http.Server{

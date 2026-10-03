@@ -79,14 +79,11 @@ func TestSignup(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	signup := func() {
-		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-			`{"email":"u@b.com","password":"Password123!"}`)
-	}
-
 	t.Run("success", func(t *testing.T) {
 		setupTest(t)
-		signup()
+		// signupSession verifies the account (#14: Login now rejects
+		// unverified users), which also conveniently sets the password.
+		signupSession(t, "u@b.com")
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
 			`{"email":"u@b.com","password":"Password123!"}`)
@@ -100,7 +97,7 @@ func TestLogin(t *testing.T) {
 
 	t.Run("authorization", func(t *testing.T) {
 		setupTest(t)
-		signup()
+		signupSession(t, "u@b.com")
 
 		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
 			`{"email":"u@b.com","password":"wrongpass"}`)
@@ -259,8 +256,16 @@ func TestConfirmPasswordReset(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		setupTest(t)
 
-		testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		signupResp := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
 			`{"email":"r@b.com","password":"Password123!"}`)
+		// Login's new #14 verified-check (below) requires a verified account.
+		vToken := decode(t, signupResp.Body.Bytes())["verification_token"].(string)
+		vw := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/verify",
+			`{"verification_token":"`+vToken+`","code":"`+mailer.verifications["r@b.com"]+`"}`)
+		if vw.Code != http.StatusOK {
+			t.Fatalf("verify status = %d, want 200 (%s)", vw.Code, vw.Body.String())
+		}
+
 		req := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/password-reset/request",
 			`{"email":"r@b.com"}`)
 		if req.Code != http.StatusOK {
@@ -294,4 +299,90 @@ func TestConfirmPasswordReset(t *testing.T) {
 			t.Fatalf("status = %d, want 400", w.Code)
 		}
 	})
+}
+
+// #14: unverified users never get a session from Login or RefreshToken.
+
+func TestLoginUnverifiedUser(t *testing.T) {
+	setupTest(t)
+	testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"unverified@b.com","password":"Password123!"}`)
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"unverified@b.com","password":"Password123!"}`)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403 (%s)", w.Code, w.Body.String())
+	}
+	body := decode(t, w.Body.Bytes())
+	if body["error"] != "email_not_verified" {
+		t.Fatalf("error = %v, want email_not_verified", body["error"])
+	}
+	// OTP mode: Login's unverified branch issues a fresh verification_token
+	// (same as Signup's unverified branch) so the client can retry /auth/verify.
+	if v, ok := body["verification_token"].(string); !ok || v == "" {
+		t.Fatal("expected a fresh verification_token for OTP mode")
+	}
+}
+
+// Rate limiting (#15, #26): end-to-end proof, through a real gin.Engine +
+// ratelimit.Limiter backed by real Redis (docker/docker-compose-test.yaml),
+// that the x-rate-limit declared on /auth/login in auth.yaml actually trips a
+// 429, and that it does not bleed into an operation with no x-rate-limit of
+// its own.
+
+func TestLoginRateLimited(t *testing.T) {
+	setupTest(t)
+	email := "ratelimit-login@b.com"
+	testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"`+email+`","password":"Password123!"}`)
+
+	// login's x-rate-limit (scope: identifier, key: email) is requests=5,
+	// burst=2 -> 7 requests allowed before the bucket is exhausted. A wrong
+	// password still consumes a token (PerOperation runs before the handler),
+	// so hammering with bad credentials drives the bucket to zero
+	// deterministically without needing the real password.
+	for i := 0; i < 7; i++ {
+		w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+			`{"email":"`+email+`","password":"wrong"}`)
+		if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("request %d: unexpectedly rate limited within burst (status %d)", i, w.Code)
+		}
+	}
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/login",
+		`{"email":"`+email+`","password":"wrong"}`)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429 once the burst is exhausted (%s)", w.Code, w.Body.String())
+	}
+	if w.Header().Get("Retry-After") == "" {
+		t.Fatal("expected a Retry-After header on a 429 response")
+	}
+
+	// A non-rate-limited operation must never 429, even while /auth/login is
+	// throttled for the same caller.
+	me := testsupport.DoJSON(router, http.MethodGet, "/api/v1/auth/me", "")
+	if me.Code == http.StatusTooManyRequests {
+		t.Fatal("/auth/me must not be rate limited by /auth/login's bucket")
+	}
+}
+
+func TestResendVerificationRateLimited(t *testing.T) {
+	setupTest(t)
+	email := "resend@b.com"
+	testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
+		`{"email":"`+email+`","password":"Password123!"}`)
+
+	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/verify/resend",
+		`{"email":"`+email+`"}`)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (%s)", w.Code, w.Body.String())
+	}
+
+	// resendVerification's x-rate-limit is a hard cooldown (requests=1,
+	// burst=0): the very next request against the same email is denied.
+	w2 := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/verify/resend",
+		`{"email":"`+email+`"}`)
+	if w2.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429 (cooldown)", w2.Code)
+	}
 }

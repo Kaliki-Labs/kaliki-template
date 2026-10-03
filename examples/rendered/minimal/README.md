@@ -10,7 +10,7 @@ docker compose up --build
 curl localhost:8080/health
 ```
 
-Postgres and the backend all come up together. Schema migrations run automatically on backend startup.
+Postgres, Redis and the backend all come up together. Schema migrations run automatically on backend startup.
 
 ## Layout
 

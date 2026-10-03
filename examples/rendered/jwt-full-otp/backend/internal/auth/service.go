@@ -14,6 +14,7 @@ import (
 	"github.com/example/jwt-full-otp-app/backend/internal/config"
 	"github.com/example/jwt-full-otp-app/backend/internal/database"
 	"github.com/example/jwt-full-otp-app/backend/internal/mail"
+	"github.com/example/jwt-full-otp-app/backend/internal/ratelimit"
 )
 
 type Service struct {
@@ -21,6 +22,7 @@ type Service struct {
 	tokens     *TokenIssuer
 	refreshTTL time.Duration
 	mailer     mail.Mailer
+	rl         *ratelimit.Limiter
 }
 
 func refreshTTL(cfg config.TokenConfig) time.Duration {
@@ -31,20 +33,25 @@ func refreshTTL(cfg config.TokenConfig) time.Duration {
 	return time.Duration(h) * time.Hour
 }
 
-func New(pool *pgxpool.Pool, cfg config.TokenConfig, mailer mail.Mailer) *Service {
+func New(pool *pgxpool.Pool, cfg config.TokenConfig, mailer mail.Mailer, rl *ratelimit.Limiter) *Service {
 	return &Service{
 		store:      NewStore(pool),
 		tokens:     NewTokenIssuer(cfg),
 		refreshTTL: refreshTTL(cfg),
 		mailer:     mailer,
+		rl:         rl,
 	}
 }
 
 // Register mounts the generated routes under the given router group, guarding
-// them with ScopeAuth so the OpenAPI `security` blocks decide what needs a token.
+// them with ScopeAuth (OpenAPI `security` blocks decide what needs a token)
+// and PerOperation (OpenAPI `x-rate-limit` extensions decide what's throttled).
 func (s *Service) Register(r gin.IRouter) {
 	gen.RegisterHandlersWithOptions(r, s, gen.GinServerOptions{
-		Middlewares: []gen.MiddlewareFunc{gen.MiddlewareFunc(s.ScopeAuth())},
+		Middlewares: []gen.MiddlewareFunc{
+			gen.MiddlewareFunc(s.ScopeAuth()),
+			gen.MiddlewareFunc(s.rl.PerOperation(gen.RateLimitRule)),
+		},
 	})
 }
 
@@ -127,6 +134,26 @@ func (s *Service) Login(c *gin.Context) {
 	}
 	if !CheckPassword(user.PasswordHash, body.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+		return
+	}
+	if !user.Verified {
+		// #14: unverified users never get a session. Issue a fresh verification
+		// credential (the old one may be expired/used) and email it, same as
+		// Signup's unverified branch. Signup itself is left alone (see ADR /
+		// CONTEXT.md): a token-mode user who hasn't clicked their link yet would
+		// otherwise be locked out between signup and verification.
+		credential, err := s.issueVerification(c.Request.Context(), user.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not issue verification"})
+			return
+		}
+		s.sendVerification(c.Request.Context(), user.Email, credential)
+		verificationToken, err := s.tokens.IssueVerification(user.ID.String())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not issue verification token"})
+			return
+		}
+		c.JSON(http.StatusForbidden, gin.H{"error": "email_not_verified", "verification_token": verificationToken})
 		return
 	}
 

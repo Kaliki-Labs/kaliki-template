@@ -7,6 +7,11 @@ paths:
     post:
       operationId: signup
       tags: [auth]
+      x-rate-limit:
+        scope: ip
+        requests: 20
+        window: 60s
+        burst: 10
       requestBody:
         required: true
         content:
@@ -26,6 +31,12 @@ paths:
     post:
       operationId: login
       tags: [auth]
+      x-rate-limit:
+        scope: identifier
+        key: email
+        requests: 5
+        window: 60s
+        burst: 2
       requestBody:
         required: true
         content:
@@ -92,6 +103,19 @@ paths:
     post:
       operationId: verifyEmail
       tags: [auth]
+      # Scoped to the credential being verified, not the account's email:
+      # VerifyRequest's body carries verification_token (OTP mode) or token
+      # (token-link mode) but never an email field, so "identifier/email"
+      # would silently fall back to IP-scoping for every call (see the
+      # fallback-to-IP judgment call in the rate limiting ADR) — correct but
+      # coarser than intended, and it throttles every verify attempt behind a
+      # shared IP together instead of per attempt.
+      x-rate-limit:
+        scope: identifier
+        key: token
+        requests: 5
+        window: 60s
+        burst: 2
       requestBody:
         required: true
         content:

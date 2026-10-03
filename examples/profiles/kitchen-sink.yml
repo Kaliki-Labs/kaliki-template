@@ -20,7 +20,6 @@ answers:
   include_example_domain: true
   auth: jwt
   verification_method: token
-  caching: redis
   eventing: kafka-redpanda
   payments: razorpay
   push_notifications: firebase

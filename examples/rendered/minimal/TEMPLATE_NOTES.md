@@ -43,6 +43,7 @@ This is documentation-only here. Note it hides endpoints from the bundle, it is
 These are wired as integration points (client init + config), not full business
 logic — extend them for your product:
 
+- `internal/cache` — Redis client (request-time caching).
 Each is constructed in `internal/server/server.go`; inject it into the domains
 that need it.
 

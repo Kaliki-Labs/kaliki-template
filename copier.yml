@@ -152,14 +152,6 @@ verification_method:
   default: otp
   when: "{{ auth == 'jwt' }}"
 
-caching:
-  type: str
-  help: Request-time caching layer
-  choices:
-    "None": none
-    "Redis": redis
-  default: redis
-
 eventing:
   type: str
   help: Event publishing

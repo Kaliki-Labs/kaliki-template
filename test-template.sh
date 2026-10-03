@@ -39,7 +39,7 @@ done
 
 # name|flags
 COMBOS=(
-  "minimal|-d auth=none -d include_example_domain=false -d include_frontend=false -d caching=none"
+  "minimal|-d auth=none -d include_example_domain=false -d include_frontend=false"
   "default|"
   "basic|-d auth=jwt-basic"
   "token_mail|-d verification_method=token"

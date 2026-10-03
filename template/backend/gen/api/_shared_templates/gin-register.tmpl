@@ -1,0 +1,65 @@
+// GinServerOptions provides options for the Gin server.
+type GinServerOptions struct {
+    BaseURL string
+    Middlewares []MiddlewareFunc
+    ErrorHandler func(*gin.Context, error, int)
+}
+
+// rateLimitRules is built from each operation's x-rate-limit OpenAPI vendor
+// extension (see docs/adr/0001-rate-limiting-forces-redis-and-is-default-on.md
+// and internal/ratelimit). Operations with no x-rate-limit extension are
+// simply absent here. Parsed once at package-init time via
+// ratelimit.MustParseRule, so a malformed extension fails the build/startup,
+// never a per-request lookup.
+var rateLimitRules = map[string]ratelimit.Rule{
+{{range . -}}
+{{$opid := .OperationId -}}
+{{$rl := index .Spec.Extensions "x-rate-limit" -}}
+{{if $rl -}}
+	{{printf "%q" $opid}}: ratelimit.MustParseRule(map[string]any{
+		"scope": {{printf "%q" (index $rl "scope")}},
+{{if index $rl "key" -}}
+		"key": {{printf "%q" (index $rl "key")}},
+{{end -}}
+		"requests": {{index $rl "requests"}},
+		"window": {{printf "%q" (index $rl "window")}},
+		"burst": {{index $rl "burst"}},
+	}),
+{{end -}}
+{{end -}}
+}
+
+// RateLimitRule looks up the x-rate-limit rule declared for operationID, if
+// any. Matches ratelimit.RuleLookup — pass this func directly to
+// ratelimit.Limiter.PerOperation.
+func RateLimitRule(operationID string) (ratelimit.Rule, bool) {
+    r, ok := rateLimitRules[operationID]
+    return r, ok
+}
+
+// RegisterHandlers creates http.Handler with routing matching OpenAPI spec.
+func RegisterHandlers(router gin.IRouter, si ServerInterface) {
+  RegisterHandlersWithOptions(router, si, GinServerOptions{})
+}
+
+// RegisterHandlersWithOptions creates http.Handler with additional options
+func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options GinServerOptions) {
+    {{- if . -}}
+    errorHandler := options.ErrorHandler
+    if errorHandler == nil {
+        errorHandler = func(c *gin.Context, err error, statusCode int) {
+            c.JSON(statusCode, gin.H{"msg": err.Error()})
+        }
+    }
+
+    wrapper := ServerInterfaceWrapper{
+        Handler: si,
+        HandlerMiddlewares: options.Middlewares,
+        ErrorHandler: errorHandler,
+    }
+    {{end}}
+
+    {{range . -}}
+    router.{{.Method }}(options.BaseURL+"{{.Path | swaggerUriToGinUri }}", wrapper.{{.OperationId}})
+    {{end -}}
+}

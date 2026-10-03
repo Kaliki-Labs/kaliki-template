@@ -6,11 +6,11 @@ Curated renderings of the template. Each profile is an answer set that guards a 
 
 ## Coverage matrix
 
-| profile | frontend | example | auth | verify | caching | eventing | payments | push | storage |
-|---|---|---|---|---|---|---|---|---|---|
-| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | redis | · | · | · | · |
-| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | redis | kafka-redpanda | razorpay | firebase | s3 |
-| [`minimal`](#minimal) | · | · | · | · | · | · | · | · | · |
+| profile | frontend | example | auth | verify | eventing | payments | push | storage |
+|---|---|---|---|---|---|---|---|---|
+| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | · | · | · | · |
+| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | kafka-redpanda | razorpay | firebase | s3 |
+| [`minimal`](#minimal) | · | · | · | · | · | · | · | · |
 
 Legend: `✓` enabled · `·` off/none · otherwise the chosen value.
 
