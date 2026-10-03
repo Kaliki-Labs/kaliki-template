@@ -19,6 +19,8 @@ Guidance for AI agents working in {{ project_name }}.
 4. Regenerate the Dart client, then build the UI.
 {%- endif %}
 
+Document every realistic 4xx a handler can return in `api/services/*.yaml`, using the shared `Error` schema for `{"error": ...}` bodies.
+
 ## Conventions
 
 - Verify backend changes with `go test ./...`, not just `go build`.

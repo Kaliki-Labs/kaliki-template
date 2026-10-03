@@ -15,6 +15,8 @@ Guidance for AI agents working in JWT Full OTP App.
 3. Register routes in `internal/server/server.go`.
 4. Regenerate the Dart client, then build the UI.
 
+Document every realistic 4xx a handler can return in `api/services/*.yaml`, using the shared `Error` schema for `{"error": ...}` bodies.
+
 ## Conventions
 
 - Verify backend changes with `go test ./...`, not just `go build`.

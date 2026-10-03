@@ -16,7 +16,8 @@ class PendingVerificationController extends _$PendingVerificationController {
   @override
   PendingVerification? build() => null;
 
-  void set(PendingVerification value) => state = value;
+  PendingVerification? get value => state;
+  set value(PendingVerification next) => state = next;
   void clear() => state = null;
 }
 
@@ -30,7 +31,7 @@ class AuthController extends _$AuthController {
     if (token == null) return null;
     try {
       return await ref.read(authClientProvider).getCurrentUser();
-    } catch (_) {
+    } on Exception catch (_) {
       await ref.read(tokenStorageProvider).clear();
       return null;
     }
@@ -55,9 +56,8 @@ class AuthController extends _$AuthController {
       final resp = await ref.read(authClientProvider).signup(
             body: SignupRequest(email: email, password: password, name: name),
           );
-      ref
-          .read(pendingVerificationControllerProvider.notifier)
-          .set((email: email, token: resp.verificationToken));
+      ref.read(pendingVerificationControllerProvider.notifier).value =
+          (email: email, token: resp.verificationToken);
       return null; // still signed out until the OTP is verified
     });
   }
@@ -86,7 +86,7 @@ class AuthController extends _$AuthController {
         await ref.read(authClientProvider).logout(
               body: RefreshRequest(refreshToken: refresh),
             );
-      } catch (_) {
+      } on Exception catch (_) {
         // Best effort; clear locally regardless.
       }
     }

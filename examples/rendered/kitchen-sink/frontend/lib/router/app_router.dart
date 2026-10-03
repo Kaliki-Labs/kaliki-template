@@ -14,12 +14,13 @@ part 'app_router.g.dart';
 GoRouter appRouter(Ref ref) {
   // Bridge the auth state into a Listenable so GoRouter re-evaluates redirects.
   final refresh = ValueNotifier<Object?>(null);
-  ref.onDispose(refresh.dispose);
-  ref.listen(
-    authControllerProvider,
-    (_, next) => refresh.value = next,
-    fireImmediately: true,
-  );
+  ref
+    ..onDispose(refresh.dispose)
+    ..listen(
+      authControllerProvider,
+      (_, next) => refresh.value = next,
+      fireImmediately: true,
+    );
 
   return GoRouter(
     initialLocation: '/',
@@ -28,22 +29,22 @@ GoRouter appRouter(Ref ref) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null; // wait for the initial load
       final loggedIn = auth.value != null;
-      final onAuthScreen =
-          state.matchedLocation == '/login' || state.matchedLocation == '/signup';
+      final onAuthScreen = state.matchedLocation == '/login' ||
+          state.matchedLocation == '/signup';
 
       if (!loggedIn && !onAuthScreen) return '/login';
       if (loggedIn && onAuthScreen) return '/';
       return null;
     },
     routes: [
-      GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/signup', builder: (_, __) => const SignupScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/signup', builder: (_, _) => const SignupScreen()),
       // Authenticated routes share the AppShell (app bar + sign-out). Add new
       // authed screens as GoRoute entries here.
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
+          GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
         ],
       ),
     ],

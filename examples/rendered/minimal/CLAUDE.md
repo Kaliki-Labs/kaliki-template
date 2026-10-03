@@ -13,6 +13,8 @@ Guidance for AI agents working in Minimal App.
 2. Implement the backend handler in `internal/<domain>`.
 3. Register routes in `internal/server/server.go`.
 
+Document every realistic 4xx a handler can return in `api/services/*.yaml`, using the shared `Error` schema for `{"error": ...}` bodies.
+
 ## Conventions
 
 - Verify backend changes with `go test ./...`, not just `go build`.
