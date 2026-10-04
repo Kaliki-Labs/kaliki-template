@@ -47,9 +47,6 @@ func Run() {
 
 	// Build the shared pgx pool and attach the otelpgx tracer to the same
 	// pipeline observability installed (no-op until an exporter is configured).
-	// Postgres is unconditional infra (same tier as Redis/observability, see
-	// docs/adr/0001) so this runs regardless of auth/include_example_domain —
-	// every domain, including ones added later with `new-domain`, needs it.
 	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
@@ -96,12 +93,7 @@ func Run() {
 		}))
 	}
 	health.New().Register(r)
-
-	// Unconditional, like the pool above: new domains registered later by
-	// `new-domain` need a router group to attach to even when no domain exists
-	// yet at generation time.
 	api := r.Group("/api/v1")
-	_ = api
 	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail), rl)
 	authSvc.Register(api)
 	items.New(pool).Register(api, authSvc.ScopeAuth(), rl.PerOperation(items_gen.RateLimitRule))

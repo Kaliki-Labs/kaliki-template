@@ -111,7 +111,37 @@ func manualInstructions(path, marker string, lines []string) {
 	}
 }
 
+// serverGoHasAPIGroup reports whether server.go already declares the shared
+// `pool` and `api` router group — both are conditional on auth != 'none' or
+// include_example_domain at generation time (Postgres isn't unconditional
+// infra; only Redis/rate-limiting is, per docs/adr/0001). The very first
+// domain added to a project with neither needs that bootstrap code added by
+// hand before wireServerGo's Register() call would even compile.
+func serverGoHasAPIGroup(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	return strings.Contains(string(data), `api := r.Group("/api/v1")`), nil
+}
+
 func wireServerGo(path, root, domain, module string, authOn bool) error {
+	hasAPIGroup, err := serverGoHasAPIGroup(path)
+	if err != nil {
+		return fmt.Errorf("checking %s: %w", relPath(root, path), err)
+	}
+	if !hasAPIGroup {
+		fmt.Printf("note: %s has no Postgres pool / \"/api/v1\" router group yet (no domain has needed one so far). Add this before wiring %s in:\n", relPath(root, path), domain)
+		fmt.Println(`  poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)`)
+		fmt.Println(`  ...`)
+		fmt.Println(`  pool, err := pgxpool.NewWithConfig(ctx, poolCfg)`)
+		fmt.Println(`  ...`)
+		fmt.Println(`  api := r.Group("/api/v1")`)
+		fmt.Println(`  (see internal/server/server.go.jinja's auth != 'none' or include_example_domain block in the template repo for the exact snippet, including imports and migration setup)`)
+		fmt.Println("then re-run this tool to wire the import and Register() call.")
+		return nil
+	}
+
 	importLines := []string{
 		fmt.Sprintf(`"%s/internal/%s"`, module, domain),
 		fmt.Sprintf(`%s_gen "%s/gen/api/%s"`, domain, module, domain),
