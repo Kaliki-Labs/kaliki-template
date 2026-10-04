@@ -5,6 +5,19 @@ Versions are git tags; `copier update` upgrades a generated project between them
 ## Unreleased
 
 ### Added
+- **`go -C scripts/new-domain run .`** replaces the old `scripts/new-domain.sh`.
+  It's now a full interactive scaffolding tool (every question also has a
+  flag, for scripting/agents): it scaffolds a domain's compiling service
+  stub + test skeletons, an empty `api/services/<domain>.yaml` spec stub, the
+  `backend/gen/api/<domain>` oapi-codegen wiring (running `go generate` for
+  you), and — via marker comments in `server.go` / `app_router.dart` /
+  `rest_client_provider.dart` — auto-wires the new domain into the generated
+  project. See `TEMPLATE_NOTES.md`'s "Adding a domain" section.
+- **Postgres + `internal/testsupport` are now unconditional infra** (same
+  tier as Redis, see `docs/adr/0001`), generated regardless of `auth` /
+  `include_example_domain`, so a domain added later by `new-domain` always has
+  a DB pool, an `/api/v1` router group, and working test scaffolding to
+  attach to — including on the `minimal` profile.
 - **Frontend example list.** When the example domain is included, the home
   screen renders the `items` list with a read/write round-trip (`itemsClient`).
 - **Frontend & API build on generation.** Post-gen tasks now build the combined

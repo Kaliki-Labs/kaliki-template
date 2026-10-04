@@ -17,6 +17,8 @@ Guidance for AI agents working in JWT Full OTP App.
 
 Document every realistic 4xx a handler can return in `api/services/*.yaml`, using the shared `Error` schema for `{"error": ...}` bodies.
 
+Scaffold a brand-new domain's mechanical pieces (service stub, test skeletons, empty spec stub, oapi-codegen wiring, server.go/frontend auto-wiring) with `go -C scripts/new-domain run .` — see `TEMPLATE_NOTES.md` for what it does and does not generate, including the marker-comment contract its auto-wiring depends on.
+
 ## Conventions
 
 - Verify backend changes with `go test ./...`, not just `go build`.

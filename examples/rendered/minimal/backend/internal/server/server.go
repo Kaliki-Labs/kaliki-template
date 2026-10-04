@@ -13,13 +13,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/exaring/otelpgx"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/example/minimal-app/backend/internal/config"
+	"github.com/example/minimal-app/backend/internal/migrate"
 	"github.com/example/minimal-app/backend/internal/health"
 	"github.com/example/minimal-app/backend/internal/observability"
 	"github.com/example/minimal-app/backend/internal/ratelimit"
 	"github.com/example/minimal-app/backend/internal/cache"
+	// newdomain:imports
 )
 
 func Run() {
@@ -36,6 +40,33 @@ func Run() {
 
 	obs := observability.Init(cfg.Observability.ServiceName, cfg.Observability.Endpoint)
 	defer obs.Shutdown()
+
+	// Build the shared pgx pool and attach the otelpgx tracer to the same
+	// pipeline observability installed (no-op until an exporter is configured).
+	// Postgres is unconditional infra (same tier as Redis/observability, see
+	// docs/adr/0001) so this runs regardless of auth/include_example_domain —
+	// every domain, including ones added later with `new-domain`, needs it.
+	poolCfg, err := pgxpool.ParseConfig(cfg.Database.URL)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTracerProvider(obs.TracerProvider()))
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatalf("database: %v", err)
+	}
+
+	migrationsDir := os.Getenv("MIGRATE_PATH")
+	if migrationsDir == "" {
+		migrationsDir = "sql/schema"
+	}
+	if err := migrate.Up(ctx, cfg.Database.URL, "", migrationsDir); err != nil {
+		log.Fatalf("migrate: %v", err)
+	}
 
 	redisCache, err := cache.Connect(ctx, cfg.Redis)
 	if err != nil {
@@ -61,6 +92,13 @@ func Run() {
 		}))
 	}
 	health.New().Register(r)
+
+	// Unconditional, like the pool above: new domains registered later by
+	// `new-domain` need a router group to attach to even when no domain exists
+	// yet at generation time.
+	api := r.Group("/api/v1")
+	_ = api
+	// newdomain:register
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

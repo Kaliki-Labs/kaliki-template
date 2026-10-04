@@ -91,3 +91,5 @@ AuthClient authClient(Ref ref) => ref.watch(restClientProvider).auth;
 
 @riverpod
 ItemsClient itemsClient(Ref ref) => ref.watch(restClientProvider).items;
+
+// newdomain:providers

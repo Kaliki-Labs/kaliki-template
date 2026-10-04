@@ -5,16 +5,46 @@ the wiring conventions so you can extend it cleanly.
 
 ## Adding a domain (the "enumeration points")
 
-A domain touches a fixed set of places. To add `widgets`:
+A domain touches a fixed set of places. `go -C scripts/new-domain run .`
+scaffolds the mechanical pieces of this for you — run
+`go -C scripts/new-domain run . --help` for its flags (it's its own tiny Go
+module, so `-C` is needed rather than `go run ./scripts/new-domain` — the
+project root itself isn't a Go module), or just run it with no flags and
+answer the prompts:
 
-1. `api/services/widgets.yaml` — define the contract first.
-2. `backend/internal/widgets/{service,store}.go` — handler + data access. Scaffold
-   its `setup_test.go` + `service_test.go` with `scripts/new-domain.sh widgets`.
-3. `backend/sql/schema/00NN_widgets.sql` — goose-style migration.
-4. `backend/internal/server/server.go` — register routes:
-   `widgets.New(db).Register(api)`.
+1. `backend/internal/<domain>/{service.go,setup_test.go,service_test.go}` — a
+   minimal compiling service stub (`Service`, `New`, `Register`) plus the test
+   skeletons.
+2. `api/services/<domain>.yaml` — an empty spec stub (`paths: {}`) for you to
+   fill in.
+3. `backend/gen/api/<domain>/{codegen.yaml,generate.go}` — the oapi-codegen
+   wiring for that spec, immediately run once so `schema.gen.go` exists.
+4. `backend/internal/server/server.go` — the import + `<domain>.New(pool).Register(api, ...)`
+   call, auto-inserted at the `// newdomain:imports` / `// newdomain:register`
+   marker comments (see "Marker comments" below).
+
+What it does **not** scaffold — schema/business judgment is yours:
+`backend/sql/schema/00NN_<domain>.sql` (migration), the real operations in the
+spec, and the real handler/store logic.
+
+You are left owning `backend/gen/api/<domain>/codegen.yaml` after this: it is
+generated once, not continuously managed by `new-domain` — hand-edit it freely
+(e.g. to add oapi-codegen options) once scaffolded.
 
 The `items` domain is a complete worked example of all of the above.
+
+### Marker comments
+
+`new-domain`'s auto-wiring depends on three exact marker comments staying in
+place:
+
+- `backend/internal/server/server.go`: `// newdomain:imports` (end of the
+  import block) and `// newdomain:register` (right after the existing domain
+  registrations).
+
+If you deliberately remove or reorganize one of these, `new-domain` falls back
+to printing the exact lines to paste manually (and exits 0) rather than
+guessing at an insertion point.
 
 ## Removing the example domain
 

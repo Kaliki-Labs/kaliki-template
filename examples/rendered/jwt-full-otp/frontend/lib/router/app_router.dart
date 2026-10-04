@@ -7,6 +7,7 @@ import '../screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/otp_screen.dart';
 import '../screens/signup_screen.dart';
+// newdomain:imports
 import 'app_shell.dart';
 
 part 'app_router.g.dart';
@@ -57,6 +58,7 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+          // newdomain:routes
         ],
       ),
     ],
