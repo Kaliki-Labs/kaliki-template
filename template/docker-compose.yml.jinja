@@ -52,6 +52,13 @@ services:
       - "${MAILPIT_UI_PORT:-8025}:8025"
 {%- endif %}
 
+  # Jaeger v2 receives the backend's OTLP traces locally. UI on http://localhost:16686
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
+
   backend:
     build:
       context: ./backend
@@ -70,6 +77,7 @@ services:
       MAIL_BASE_URL: ${MAIL_BASE_URL:-http://localhost:8080}
 {%- endif %}
       REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
 {%- if eventing == 'kafka-redpanda' %}
       KAFKA_BROKERS: redpanda:9092
 {%- endif %}

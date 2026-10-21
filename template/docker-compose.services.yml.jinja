@@ -1,4 +1,4 @@
-# Dependencies only — postgres, redis{% if auth == 'jwt' %}, mailpit{% endif %}{% if eventing == 'kafka-redpanda' %}, redpanda{% endif %}.
+# Dependencies only — postgres, redis, jaeger{% if auth == 'jwt' %}, mailpit{% endif %}{% if eventing == 'kafka-redpanda' %}, redpanda{% endif %}.
 #
 # Use this to run the backend on your host (go run ./cmd/server) against
 # containerized dependencies, instead of building the backend image:
@@ -60,6 +60,13 @@ services:
       timeout: 5s
       retries: 10
 {%- endif %}
+
+  # Jaeger v2 receives the backend's OTLP traces locally. UI on http://localhost:16686
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
 
 volumes:
   pgdata:

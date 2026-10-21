@@ -30,9 +30,10 @@ Postgres, Redis{% if eventing == 'kafka-redpanda' %}, Redpanda{% endif %} and th
 
 ## Observability
 
-Tracing is wired in by default with a **no-op** exporter. Set
-`observability.endpoint` in `backend/config/env.yaml` (or
-`OTEL_EXPORTER_OTLP_ENDPOINT`) to export to a real collector.
+Tracing is wired in by default. Locally, both compose files start Jaeger and the
+backend exports to it; browse traces at http://localhost:16686. Elsewhere the
+exporter is a **no-op** until you set `observability.endpoint` in
+`backend/config/env.yaml` (or `OTEL_EXPORTER_OTLP_ENDPOINT`) to a real collector.
 
 `backend/config/env.yaml` is the live, git-ignored config; it is seeded from the
 committed `backend/config/env.example.yaml` on generation. Edit the example to

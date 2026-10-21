@@ -139,9 +139,7 @@ func (s *Service) Login(c *gin.Context) {
 	if !user.Verified {
 		// #14: unverified users never get a session. Issue a fresh verification
 		// credential (the old one may be expired/used) and email it, same as
-		// Signup's unverified branch. Signup itself is left alone (see ADR /
-		// CONTEXT.md): a token-mode user who hasn't clicked their link yet would
-		// otherwise be locked out between signup and verification.
+		// Signup's unverified branch.
 		credential, err := s.issueVerification(c.Request.Context(), user.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not issue verification"})

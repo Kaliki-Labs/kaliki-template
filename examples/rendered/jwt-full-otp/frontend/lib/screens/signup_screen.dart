@@ -32,6 +32,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           _password.text,
           _name.text.trim().isEmpty ? null : _name.text.trim(),
         );
+    // Backends that gate signup on email verification return no session. The
+    // router redirects away (unmounting this screen) when a flow of its own
+    // takes over, e.g. the OTP screen; otherwise point the user to their inbox.
+    final next = ref.read(authControllerProvider);
+    if (!mounted || next.hasError || next.value != null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Check your email to verify your account.')),
+    );
+    context.go('/login');
   }
 
   @override

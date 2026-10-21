@@ -25,6 +25,13 @@ services:
       timeout: 3s
       retries: 5
 
+  # Jaeger v2 receives the backend's OTLP traces locally. UI on http://localhost:16686
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
+
   backend:
     build:
       context: ./backend
@@ -33,6 +40,7 @@ services:
       SERVER_PORT: "8080"
       APP_ENV: ${APP_ENV:-development}
       REDIS_URL: redis://redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: jaeger:4317
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

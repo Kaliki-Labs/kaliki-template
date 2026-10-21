@@ -28,11 +28,15 @@ func TestSignup(t *testing.T) {
 			t.Fatalf("status = %d, want 201 (%s)", w.Code, w.Body.String())
 		}
 		body := decode(t, w.Body.Bytes())
-		// Signup does not start a session: it returns only a verification token
-		// to pair with the emailed OTP. No access/refresh tokens until verified.
+		// Signup does not start a session. No access/refresh tokens until the
+		// email is verified.
 		if body["token"] != nil || body["refresh_token"] != nil {
 			t.Fatal("signup must not issue a session before verification")
 		}
+		if body["user"] == nil {
+			t.Fatal("expected the created user in the response")
+		}
+		// OTP mode also returns a token to pair with the emailed code.
 		if body["verification_token"] == "" || body["verification_token"] == nil {
 			t.Fatal("expected a verification token")
 		}

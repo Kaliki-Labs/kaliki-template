@@ -62,6 +62,13 @@ class AuthController extends _$AuthController {
       ref.read(pendingVerificationControllerProvider.notifier).value =
           (email: email, token: resp.verificationToken);
       return null; // still signed out until the OTP is verified
+{%- elif auth == 'jwt' %}
+      // Signup does not start a session. The backend emails a verification
+      // link; the user clicks it, then logs in.
+      await ref.read(authClientProvider).signup(
+            body: SignupRequest(email: email, password: password, name: name),
+          );
+      return null; // still signed out until the email is verified
 {%- else %}
       final session = await ref.read(authClientProvider).signup(
             body: SignupRequest(email: email, password: password, name: name),

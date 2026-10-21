@@ -24,7 +24,7 @@ paths:
           content:
             application/json:
               schema:
-{%- if auth == 'jwt' and verification_method == 'otp' %}
+{%- if auth == 'jwt' %}
                 $ref: "#/components/schemas/SignupResponse"
 {%- else %}
                 $ref: "#/components/schemas/AuthResponse"
@@ -244,19 +244,27 @@ components:
           description: Long-lived, revocable refresh token. Rotated on each use.
         user:
           $ref: "#/components/schemas/User"
-{%- if auth == 'jwt' and verification_method == 'otp' %}
+{%- if auth == 'jwt' %}
     SignupResponse:
       type: object
+{%- if verification_method == 'otp' %}
       required: [user, verification_token]
+{%- else %}
+      required: [user]
+{%- endif %}
       properties:
         user:
           $ref: "#/components/schemas/User"
+{%- if verification_method == 'otp' %}
         verification_token:
           type: string
           description: >-
             Short-lived token identifying the just-created (unverified) account.
             Submit it with the emailed OTP to POST /auth/verify to obtain a
             session. No access/refresh token is issued until the email is verified.
+{%- endif %}
+{%- endif %}
+{%- if auth == 'jwt' and verification_method == 'otp' %}
     ResendVerificationRequest:
       type: object
       required: [email]
