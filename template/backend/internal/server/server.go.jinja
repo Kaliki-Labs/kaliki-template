@@ -51,6 +51,7 @@ import (
 {%- if object_storage == 's3' %}
 	"{{ go_module_path }}/internal/storage"
 {%- endif %}
+	// newdomain:imports
 )
 
 func Run() {
@@ -155,6 +156,7 @@ func Run() {
 {%- if include_example_domain %}
 	items.New(pool).Register(api{% if auth == 'jwt' %}, authSvc.ScopeAuth(){% endif %}, rl.PerOperation(items_gen.RateLimitRule))
 {%- endif %}
+	// newdomain:register
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

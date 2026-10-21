@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 /// promote to a shared_ui package once a second app needs it.
 class AppButton extends StatelessWidget {
   const AppButton({
-    super.key,
     required this.label,
     required this.onPressed,
+    super.key,
     this.loading = false,
   });
 

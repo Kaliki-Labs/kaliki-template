@@ -31,6 +31,7 @@ import (
 	"github.com/example/kitchen-sink-app/backend/internal/payments"
 	"github.com/example/kitchen-sink-app/backend/internal/push"
 	"github.com/example/kitchen-sink-app/backend/internal/storage"
+	// newdomain:imports
 )
 
 func Run() {
@@ -118,6 +119,7 @@ func Run() {
 	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail), rl)
 	authSvc.Register(api)
 	items.New(pool).Register(api, authSvc.ScopeAuth(), rl.PerOperation(items_gen.RateLimitRule))
+	// newdomain:register
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

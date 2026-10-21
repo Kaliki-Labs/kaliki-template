@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
+template/scripts/new-domain/new-domain
 
 # Local scratch: complete post-task renders for browsing (make full)
 examples/_full/

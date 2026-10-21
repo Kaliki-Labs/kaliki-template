@@ -37,7 +37,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     ref.listen(authControllerProvider, (_, next) {
       if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login failed. Check your credentials.')),
+          const SnackBar(
+            content: Text('Login failed. Check your credentials.'),
+          ),
         );
       }
     });

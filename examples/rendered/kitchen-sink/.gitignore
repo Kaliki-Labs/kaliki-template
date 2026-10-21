@@ -3,6 +3,7 @@ backend/config/env.yaml
 backend/bin/
 backend/app
 *.log
+scripts/new-domain/new-domain
 
 # Node (api/ tooling)
 node_modules/

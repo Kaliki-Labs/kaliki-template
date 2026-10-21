@@ -18,6 +18,10 @@ _skip_tasks:
 # Building the API spec needs Node/npm; the frontend steps need the Flutter SDK
 # (which bundles Dart). Those run only when the relevant pieces are generated.
 _tasks:
+  # Preflight runs FIRST: verify host Go/Node/Dart versions before any codegen
+  # so an unsupported toolchain fails in one line instead of mid-generation.
+  - command: "bash scripts/preflight.sh"
+    when: "{{ not _skip_tasks }}"
   # Local dev config: server reads backend/config/env.yaml (gitignored). Seed it
   # from the committed example so `go run ./cmd/server` works out of the box.
   - command: "cp config/env.example.yaml config/env.yaml"
@@ -29,6 +33,17 @@ _tasks:
   # either does — this roughly halves the wall-clock cost of a fresh
   # `copier copy` whenever sqlc/oapi-codegen and the frontend pipeline would
   # otherwise run back-to-back.
+  # Project-scoped Flutter pin (frontend/.fvmrc). The global SDK is never touched.
+  # Without fvm on PATH this is advisory only, so generation still succeeds.
+  - command: |-
+      if command -v fvm >/dev/null 2>&1; then
+        fvm install {{ flutter_version }}
+        fvm use {{ flutter_version }} --skip-setup
+      else
+        echo "WARNING: fvm not on PATH; skipping project-scoped Flutter {{ flutter_version }} install (see frontend/.fvmrc)" >&2
+      fi
+    working_directory: "frontend"
+    when: "{{ not _skip_tasks and include_frontend }}"
   - command: |-
       (
         set -e
@@ -128,6 +143,12 @@ include_example_domain:
   type: bool
   help: "Generate the disposable 'items' example domain (full vertical slice)"
   default: true
+
+flutter_version:
+  type: str
+  help: Flutter SDK version for the generated app (pinned in frontend/.fvmrc; must satisfy the frontend's Dart constraint)
+  default: "3.47.4"
+  when: "{{ include_frontend }}"
 
 # ─── Backend modules ─────────────────────────────────────────────────────────
 auth:

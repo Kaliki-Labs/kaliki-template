@@ -24,7 +24,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   }
 
   Future<void> _submit() async {
-    await ref.read(authControllerProvider.notifier).verifyOtp(_code.text.trim());
+    await ref
+        .read(authControllerProvider.notifier)
+        .verifyOtp(_code.text.trim());
   }
 
   @override

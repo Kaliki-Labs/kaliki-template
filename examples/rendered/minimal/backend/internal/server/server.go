@@ -20,6 +20,7 @@ import (
 	"github.com/example/minimal-app/backend/internal/observability"
 	"github.com/example/minimal-app/backend/internal/ratelimit"
 	"github.com/example/minimal-app/backend/internal/cache"
+	// newdomain:imports
 )
 
 func Run() {
@@ -61,6 +62,7 @@ func Run() {
 		}))
 	}
 	health.New().Register(r)
+	// newdomain:register
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,

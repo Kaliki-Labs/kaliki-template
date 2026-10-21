@@ -27,6 +27,7 @@ import (
 	items_gen "github.com/example/jwt-full-otp-app/backend/gen/api/items"
 	"github.com/example/jwt-full-otp-app/backend/internal/ratelimit"
 	"github.com/example/jwt-full-otp-app/backend/internal/cache"
+	// newdomain:imports
 )
 
 func Run() {
@@ -96,6 +97,7 @@ func Run() {
 	authSvc := auth.New(pool, cfg.Token, mail.New(cfg.Mail), rl)
 	authSvc.Register(api)
 	items.New(pool).Register(api, authSvc.ScopeAuth(), rl.PerOperation(items_gen.RateLimitRule))
+	// newdomain:register
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Server.Port,
