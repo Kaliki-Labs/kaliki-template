@@ -63,7 +63,7 @@ class _AuthInterceptor extends QueuedInterceptor {
         ..headers['X-Auth-Retry'] = 'true';
       final retried = await _dio.fetch<dynamic>(opts);
       return handler.resolve(retried);
-    } on Exception catch (_) {
+    } on Object catch (_) {
       await storage.clear();
       return handler.next(err);
     }

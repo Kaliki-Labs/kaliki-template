@@ -107,7 +107,7 @@ class _AddItemFieldState extends ConsumerState<_AddItemField> {
           .createItem(body: CreateItemRequest(name: name));
       _controller.clear();
       ref.invalidate(itemsListProvider);
-    } on Exception catch (_) {
+    } on Object catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not add item.')),

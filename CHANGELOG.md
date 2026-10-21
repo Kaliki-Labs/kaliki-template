@@ -13,11 +13,14 @@ Versions are git tags; `copier update` upgrades a generated project between them
   you), and — via marker comments in `server.go` / `app_router.dart` /
   `rest_client_provider.dart` — auto-wires the new domain into the generated
   project. See `TEMPLATE_NOTES.md`'s "Adding a domain" section.
-- **Postgres + `internal/testsupport` are now unconditional infra** (same
-  tier as Redis, see `docs/adr/0001`), generated regardless of `auth` /
-  `include_example_domain`, so a domain added later by `new-domain` always has
-  a DB pool, an `/api/v1` router group, and working test scaffolding to
-  attach to — including on the `minimal` profile.
+- **`internal/testsupport` is now unconditional infra**, generated regardless
+  of `auth` / `include_example_domain`, so a domain added later by
+  `new-domain` always has working test scaffolding to attach to — including
+  on the `minimal` profile. Postgres pool/migrations and the `/api/v1` router
+  group remain opt-in as before (gated on `auth != 'none' or
+  include_example_domain`); if neither is present yet, `new-domain` detects
+  this and prints the bootstrap snippet to add by hand before it can wire a
+  domain in.
 - **Frontend example list.** When the example domain is included, the home
   screen renders the `items` list with a read/write round-trip (`itemsClient`).
 - **Frontend & API build on generation.** Post-gen tasks now build the combined
