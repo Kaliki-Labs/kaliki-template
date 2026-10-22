@@ -28,8 +28,13 @@ func TestSignup(t *testing.T) {
 			t.Fatalf("status = %d, want 201 (%s)", w.Code, w.Body.String())
 		}
 		body := decode(t, w.Body.Bytes())
-		if body["token"] == "" || body["token"] == nil {
-			t.Fatal("expected a session token")
+		// Signup does not start a session. No access/refresh tokens until the
+		// email is verified.
+		if body["token"] != nil || body["refresh_token"] != nil {
+			t.Fatal("signup must not issue a session before verification")
+		}
+		if body["user"] == nil {
+			t.Fatal("expected the created user in the response")
 		}
 
 		// Password must be stored hashed, never in plaintext.
@@ -40,9 +45,6 @@ func TestSignup(t *testing.T) {
 		}
 		if hash == "" || hash == "Password123!" {
 			t.Fatalf("password not hashed: %q", hash)
-		}
-		if body["refresh_token"] == "" || body["refresh_token"] == nil {
-			t.Fatal("expected a refresh token")
 		}
 		// The verification credential is emailed, never returned in the response.
 		if body["code"] != nil || body["verify_token"] != nil {
@@ -123,10 +125,8 @@ func signupSession(t *testing.T, email string) (string, string) {
 		t.Fatalf("signup status = %d (%s)", w.Code, w.Body.String())
 	}
 	b := decode(t, w.Body.Bytes())
-	// Signup already returns a session here (token mode issues one
-	// unconditionally, even pre-verification), but Login/RefreshToken now
-	// reject unverified accounts (#14) — verify via the emailed token so
-	// callers of signupSession get a session later endpoints will accept.
+	// Signup returns no session in token mode either (#30); verify via the
+	// emailed token to obtain one.
 	credential := mailer.verifications[email]
 	if credential == "" {
 		t.Fatalf("no verification credential captured for %s", email)
@@ -321,18 +321,12 @@ func TestLoginUnverifiedUser(t *testing.T) {
 
 func TestRefreshTokenUnverifiedUser(t *testing.T) {
 	setupTest(t)
-	// Token mode: Signup issues a session unconditionally even though the
-	// account is unverified (see CONTEXT.md / the #14 judgment calls) — so an
-	// unverified user can hold a refresh token, which RefreshToken must still
-	// refuse.
-	signupResp := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/signup",
-		`{"email":"unverified2@b.com","password":"Password123!"}`)
-	if signupResp.Code != http.StatusCreated {
-		t.Fatalf("signup status = %d (%s)", signupResp.Code, signupResp.Body.String())
-	}
-	refresh, ok := decode(t, signupResp.Body.Bytes())["refresh_token"].(string)
-	if !ok || refresh == "" {
-		t.Fatal("expected signup to issue a refresh token in token mode")
+	// Signup no longer issues a session, so obtain one via verification and
+	// then mark the account unverified again: RefreshToken must refuse it.
+	_, refresh := signupSession(t, "unverified2@b.com")
+	if _, err := testDB.Pool.Exec(context.Background(),
+		`UPDATE users SET verified = false WHERE email = $1`, "unverified2@b.com"); err != nil {
+		t.Fatalf("unverify: %v", err)
 	}
 
 	w := testsupport.DoJSON(router, http.MethodPost, "/api/v1/auth/refresh",

@@ -35,11 +35,12 @@ class AuthController extends _$AuthController {
   Future<void> signup(String email, String password, String? name) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final session = await ref.read(authClientProvider).signup(
+      // Signup does not start a session. The backend emails a verification
+      // link; the user clicks it, then logs in.
+      await ref.read(authClientProvider).signup(
             body: SignupRequest(email: email, password: password, name: name),
           );
-      await _persist(session);
-      return session.user;
+      return null; // still signed out until the email is verified
     });
   }
 

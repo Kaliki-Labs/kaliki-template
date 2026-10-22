@@ -112,7 +112,8 @@ and parallel-safe. Graduate only if you hit real pain:
 ## Observability
 
 OpenTelemetry tracing is wired in: `otelgin` traces HTTP requests and `otelpgx`
-traces DB queries. It is a no-op until you set `observability.endpoint` (or
+traces DB queries. Local compose files start Jaeger (UI on
+`http://localhost:16686`) and the dev config exports to it. Otherwise it is a no-op until you set `observability.endpoint` (or
 `OTEL_EXPORTER_OTLP_ENDPOINT`) to an OTLP/**gRPC** collector `host:port` — then
 the global tracer provider exports via OTLP (insecure; front it with a collector
 or add TLS for production). Spans flush on graceful shutdown.

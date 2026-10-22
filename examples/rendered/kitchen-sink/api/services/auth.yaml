@@ -24,7 +24,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/SignupResponse"
         "409":
           description: Email already registered
   /auth/login:
@@ -197,6 +197,12 @@ components:
         refresh_token:
           type: string
           description: Long-lived, revocable refresh token. Rotated on each use.
+        user:
+          $ref: "#/components/schemas/User"
+    SignupResponse:
+      type: object
+      required: [user]
+      properties:
         user:
           $ref: "#/components/schemas/User"
     RefreshRequest:

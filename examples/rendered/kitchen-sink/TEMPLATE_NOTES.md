@@ -95,6 +95,13 @@ returned in any API response. This holds regardless of the configured provider.
 
 Verification method: **token** (random tokens emailed as links built from `mail.base_url`).
 
+**Signup does not start a session.** `POST /auth/signup` creates the (unverified)
+account, emails a verification link, and returns only the user — *not* an
+access/refresh pair. The client submits the emailed token to `POST /auth/verify`,
+which marks the account verified and returns the session; until then `login` and
+`refresh` return 403 `email_not_verified`. The frontend shows "check your email"
+and returns to the login screen.
+
 ### Mail providers
 
 `internal/mail` selects a transport at runtime from `mail.provider`:
@@ -169,7 +176,8 @@ and parallel-safe. Graduate only if you hit real pain:
 ## Observability
 
 OpenTelemetry tracing is wired in: `otelgin` traces HTTP requests and `otelpgx`
-traces DB queries. It is a no-op until you set `observability.endpoint` (or
+traces DB queries. Local compose files start Jaeger (UI on
+`http://localhost:16686`) and the dev config exports to it. Otherwise it is a no-op until you set `observability.endpoint` (or
 `OTEL_EXPORTER_OTLP_ENDPOINT`) to an OTLP/**gRPC** collector `host:port` — then
 the global tracer provider exports via OTLP (insecure; front it with a collector
 or add TLS for production). Spans flush on graceful shutdown.
