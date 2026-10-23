@@ -11,6 +11,7 @@ Curated renderings of the template. Each profile is an answer set that guards a 
 | [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | · | · | · | · |
 | [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | kafka-redpanda | razorpay | firebase | s3 |
 | [`minimal`](#minimal) | · | · | · | · | · | · | · | · |
+| [`no-auth-frontend`](#no-auth-frontend) | ✓ | ✓ | · | · | · | · | · | · |
 
 Legend: `✓` enabled · `·` off/none · otherwise the chosen value.
 
@@ -55,3 +56,16 @@ Guards:
 Validated by: `go build`, `go vet`, `go test`, `docker build`
 
 Snapshot: [`examples/rendered/minimal/`](rendered/minimal)
+
+### no-auth-frontend
+
+**No-auth frontend** — Flutter app with auth=none and the example domain on.
+
+Guards:
+- auth=none file set on the frontend (no login/signup/OTP screens, auth_controller, token_storage)
+- no flutter_secure_storage dependency, plain Dio without the auth interceptor
+- include_frontend=true with include_example_domain=true (home screen shows the items list)
+
+Validated by: `flutter analyze`
+
+Snapshot: [`examples/rendered/no-auth-frontend/`](rendered/no-auth-frontend)
