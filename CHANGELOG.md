@@ -5,6 +5,12 @@ Versions are git tags; `copier update` upgrades a generated project between them
 ## Unreleased
 
 ### Added
+- **Deployment notes and optional image publishing (#37, #38).** Generated
+  projects get `docs/deploying.md` (container contract and first-deploy
+  pitfalls). New `publish_image` question (default off) adds
+  `.github/workflows/publish-image.yml`, a registry-agnostic build-and-push
+  workflow (GHCR by default). Terraform/CloudFront deploy scaffolding (#13) was
+  deliberately not added.
 - **Auth-free frontend (#24).** With `auth: none` the generated Flutter app no
   longer includes login/signup/OTP screens, `auth_controller`, `token_storage`,
   the auth interceptor, `authClient` or `flutter_secure_storage`; the router has

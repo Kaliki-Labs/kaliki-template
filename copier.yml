@@ -202,6 +202,11 @@ object_storage:
     "S3-compatible": s3
   default: none
 
+publish_image:
+  type: bool
+  help: Add a CI workflow that builds the backend image and pushes it to a container registry
+  default: false
+
 # A shared UI design-system package is intentionally NOT scaffolded. The
 # frontend ships a handful of local widgets in frontend/lib/widgets; extract a
 # real shared_ui package into its own repo once a second app needs it.
