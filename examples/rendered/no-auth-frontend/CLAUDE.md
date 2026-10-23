@@ -1,0 +1,38 @@
+# CLAUDE.md
+
+Guidance for AI agents working in No Auth App.
+
+## Stack
+
+- `backend/` — Go HTTP server (gin + pgx). One package per domain under `internal/`.
+- `api/` — OpenAPI specs; the contract is the source of truth. Update the spec first.
+- `frontend/` — Flutter (Riverpod + GoRouter). Always use the Riverpod generator.
+
+## Order of operations for API changes
+
+1. Update `api/services/*.yaml`.
+2. Implement the backend handler in `internal/<domain>`.
+3. Register routes in `internal/server/server.go`.
+4. Regenerate the Dart client, then build the UI.
+
+Document every realistic 4xx a handler can return in `api/services/*.yaml`, using the shared `Error` schema for `{"error": ...}` bodies.
+
+Scaffold a brand-new domain's mechanical pieces (service stub, test skeletons, empty spec stub, oapi-codegen wiring, server.go/frontend auto-wiring) with `go -C scripts/new-domain run .` — see `TEMPLATE_NOTES.md` for what it does and does not generate, including the marker-comment contract its auto-wiring depends on.
+
+## Conventions
+
+- Verify backend changes with `go test ./...`, not just `go build`.
+- Migrations are goose-style files in `backend/sql/schema`, applied on startup.
+- Observability is always-on with a no-op default — never gate it behind a flag.
+
+## Architecture
+
+The module structure is checked, not just documented. Policy is in `architecture.yaml`; the tool is `go tool archmodel`, run from `backend/`.
+
+- Before reaching for grep to learn the structure, ask the model: `go tool archmodel query rules` (read this before adding a dependency), `query module <name>`, `query who-depends <name>`, `query operation <operationId>`, `query table <name>`. All print JSON.
+- Domains (a module with an `api/services/<name>.yaml`) never import other Domains. If one needs another, declare a small interface in the consumer and wire the other Domain into it in `internal/server`.
+- Every package starts with a doc comment (`// Package x ...`, or `// Command x ...` for a main package) saying what it's for. It's the module's purpose in the Explorer.
+- Run `make arch-check` before finishing. On failure, follow its fix hint; don't change `architecture.yaml` to make a violation go away.
+- After opening or pushing to a PR that changes modules, their dependencies, API operations or tables, run `make arch-pr`. It posts the Architecture diff image on the PR (CI posts only the text version) and replaces your previous one.
+
+See `TEMPLATE_NOTES.md` for how domains are wired.

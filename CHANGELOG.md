@@ -5,6 +5,10 @@ Versions are git tags; `copier update` upgrades a generated project between them
 ## Unreleased
 
 ### Added
+- **Auth-free frontend (#24).** With `auth: none` the generated Flutter app no
+  longer includes login/signup/OTP screens, `auth_controller`, `token_storage`,
+  the auth interceptor, `authClient` or `flutter_secure_storage`; the router has
+  no redirects and the shell has no sign-out. New `no-auth-frontend` example.
 - **`go -C scripts/new-domain run .`** replaces the old `scripts/new-domain.sh`.
   It's now a full interactive scaffolding tool (every question also has a
   flag, for scripting/agents): it scaffolds a domain's compiling service

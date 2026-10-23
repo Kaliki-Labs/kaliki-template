@@ -33,6 +33,8 @@ jobs:
             include_frontend: true
           - profile: kitchen-sink
             include_frontend: true
+          - profile: no-auth-frontend
+            include_frontend: true
     name: ${{ matrix.profile }}
     services:
       postgres:

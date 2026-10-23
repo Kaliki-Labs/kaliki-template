@@ -1,0 +1,27 @@
+.env
+backend/config/env.yaml
+backend/bin/
+backend/app
+*.log
+scripts/new-domain/new-domain
+
+# Node (api/ tooling)
+node_modules/
+
+# Flutter
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+# Melos bootstrap writes workspace-level IntelliJ project files at the
+# project root (frontend/.gitignore already covers its own nested .idea/).
+.idea/
+*.iml
+# frontend/ and packages/shared_api_client/ are members of one Dart pub
+# workspace: there's a single pubspec.lock at the project root (not one per
+# package) and it's committed, same as any application's lockfile.
+
+# Architecture model + Explorer output (`make arch`, `go tool archmodel build`)
+.archmodel/

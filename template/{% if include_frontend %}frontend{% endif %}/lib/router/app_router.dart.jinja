@@ -1,14 +1,19 @@
-import 'package:flutter/foundation.dart';
-import 'package:go_router/go_router.dart';
+{% if auth != 'none' %}import 'package:flutter/foundation.dart';
+{% endif %}import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-
+{% if auth != 'none' %}
 import '../auth/auth_controller.dart';
+{%- endif %}
 import '../screens/home_screen.dart';
+{%- if auth != 'none' %}
 import '../screens/login_screen.dart';
+{%- endif %}
 {%- if auth == 'jwt' and verification_method == 'otp' %}
 import '../screens/otp_screen.dart';
 {%- endif %}
+{%- if auth != 'none' %}
 import '../screens/signup_screen.dart';
+{%- endif %}
 // newdomain:imports
 import 'app_shell.dart';
 
@@ -16,6 +21,7 @@ part 'app_router.g.dart';
 
 @riverpod
 GoRouter appRouter(Ref ref) {
+{%- if auth != 'none' %}
   // Bridge the auth state into a Listenable so GoRouter re-evaluates redirects.
   final refresh = ValueNotifier<Object?>(null);
   ref
@@ -33,9 +39,14 @@ GoRouter appRouter(Ref ref) {
     )
 {%- endif %};
 
+{%- endif %}{% if auth != 'none' %}
+{% endif %}
   return GoRouter(
     initialLocation: '/',
+{%- if auth != 'none' %}
     refreshListenable: refresh,
+{%- endif %}
+{%- if auth != 'none' %}
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (auth.isLoading) return null; // wait for the initial load
@@ -54,14 +65,17 @@ GoRouter appRouter(Ref ref) {
       if (loggedIn && onAuthScreen) return '/';
       return null;
     },
+{%- endif %}
     routes: [
+{%- if auth != 'none' %}
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, _) => const SignupScreen()),
 {%- if auth == 'jwt' and verification_method == 'otp' %}
       GoRoute(path: '/verify', builder: (_, _) => const OtpScreen()),
 {%- endif %}
-      // Authenticated routes share the AppShell (app bar + sign-out). Add new
-      // authed screens as GoRoute entries here.
+{%- endif %}
+      // {% if auth != 'none' %}Authenticated routes{% else %}Routes{% endif %} share the AppShell (app bar{% if auth != 'none' %} + sign-out{% endif %}). Add new
+      // {% if auth != 'none' %}authed {% endif %}screens as GoRoute entries here.
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [

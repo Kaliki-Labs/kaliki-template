@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
+{%- if auth != 'none' %}
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_controller.dart';
+{%- endif %}
 
-/// Shared chrome for every authenticated route, mounted by the ShellRoute in
+/// Shared chrome for every {% if auth != 'none' %}authenticated {% endif %}route, mounted by the ShellRoute in
 /// app_router.dart. Screens below it (`child`) are just their content — no
-/// Scaffold/AppBar of their own — so adding a new authed screen is one route
-/// entry, not a copy of the app bar + sign-out wiring.
-class AppShell extends ConsumerWidget {
+/// Scaffold/AppBar of their own — so adding a new {% if auth != 'none' %}authed {% endif %}screen is one route
+/// entry, not a copy of the app bar{% if auth != 'none' %} + sign-out wiring{% endif %}.
+class AppShell extends {% if auth != 'none' %}ConsumerWidget{% else %}StatelessWidget{% endif %} {
   const AppShell({required this.child, super.key});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context{% if auth != 'none' %}, WidgetRef ref{% endif %}) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('{{ project_name }}'),
+{%- if auth != 'none' %}
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -24,6 +27,7 @@ class AppShell extends ConsumerWidget {
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           ),
         ],
+{%- endif %}
       ),
       body: child,
     );
