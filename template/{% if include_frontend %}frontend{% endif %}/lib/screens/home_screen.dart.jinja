@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+{%- if auth != 'none' or include_example_domain %}
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+{%- endif %}
 {%- if include_example_domain %}
 import 'package:shared_api_client/export.dart';
 
 import '../api/rest_client_provider.dart';
 {%- endif %}
-
+{% if auth != 'none' %}
 import '../auth/auth_controller.dart';
+{%- endif %}
 {%- if include_example_domain %}
 
 /// Loads the example `items` from the API. Invalidate it to refresh the list.
@@ -17,17 +20,18 @@ final FutureProvider<List<Item>> itemsListProvider =
 });
 {%- endif %}
 
-/// Authenticated landing screen, rendered inside AppShell (see
-/// router/app_shell.dart for the shared app bar + sign-out action).{% if include_example_domain %} Below
+/// {% if auth != 'none' %}Authenticated landing{% else %}Landing{% endif %} screen, rendered inside AppShell (see
+/// router/app_shell.dart for the shared app bar{% if auth != 'none' %} + sign-out action{% endif %}).{% if include_example_domain %} Below
 /// the status line, a simple list backed by the example `items` domain
 /// demonstrates a full read/write round-trip.{% endif %}
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends {% if auth != 'none' %}ConsumerWidget{% else %}StatelessWidget{% endif %} {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context{% if auth != 'none' %}, WidgetRef ref{% endif %}) {
+{%- if auth != 'none' %}
     final user = ref.watch(authControllerProvider).value;
-
+{% endif %}
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
@@ -41,7 +45,11 @@ class HomeScreen extends ConsumerWidget {
             const Icon(Icons.check_circle_outline, size: 48),
             const SizedBox(height: 16),
             Text(
+{%- if auth != 'none' %}
               user == null ? 'Signed in' : 'Signed in as ${user.email}',
+{%- else %}
+              '{{ project_name }}',
+{%- endif %}
               style: Theme.of(context).textTheme.titleMedium,
             ),
 {%- if include_example_domain %}

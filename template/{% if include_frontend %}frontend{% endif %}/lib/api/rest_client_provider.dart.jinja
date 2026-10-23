@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+{%- if auth != 'none' %}
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+{%- endif %}
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_api_client/export.dart';
-
+{% if auth != 'none' %}
 import 'token_storage.dart';
+{%- endif %}
 
 part 'rest_client_provider.g.dart';
 
@@ -13,6 +16,7 @@ const apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
   defaultValue: 'http://localhost:8080/api/v1',
 );
+{%- if auth != 'none' %}
 
 @Riverpod(keepAlive: true)
 TokenStorage tokenStorage(Ref ref) =>
@@ -69,6 +73,7 @@ class _AuthInterceptor extends QueuedInterceptor {
     }
   }
 }
+{%- endif %}
 
 @Riverpod(keepAlive: true)
 Dio dio(Ref ref) {
@@ -78,7 +83,9 @@ Dio dio(Ref ref) {
     receiveTimeout: const Duration(seconds: 10),
     headers: {'Content-Type': 'application/json'},
   ));
+{%- if auth != 'none' %}
   dio.interceptors.add(_AuthInterceptor(dio, ref));
+{%- endif %}
   return dio;
 }
 
@@ -86,8 +93,11 @@ Dio dio(Ref ref) {
 RestClient restClient(Ref ref) =>
     RestClient(ref.watch(dioProvider), baseUrl: apiBaseUrl);
 
+{%- if auth != 'none' %}
+
 @riverpod
 AuthClient authClient(Ref ref) => ref.watch(restClientProvider).auth;
+{%- endif %}
 {%- if include_example_domain %}
 
 @riverpod

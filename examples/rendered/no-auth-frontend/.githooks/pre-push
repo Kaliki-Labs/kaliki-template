@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Local pre-push gate. Enable once with `make hooks`. Runs the same fitness
+# checks CI enforces (cyclomatic complexity, file/line-count limits) before
+# the push leaves your machine. Set SKIP_CHECK=1 to bypass for a throwaway
+# push.
+set -euo pipefail
+
+if [ "${SKIP_CHECK:-0}" = "1" ]; then
+  echo "pre-push: SKIP_CHECK=1, skipping local validation"
+  exit 0
+fi
+
+echo "pre-push: running 'make check' (set SKIP_CHECK=1 to skip)"
+exec make check

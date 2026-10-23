@@ -1,0 +1,149 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_api_client/export.dart';
+
+import '../api/rest_client_provider.dart';
+
+
+/// Loads the example `items` from the API. Invalidate it to refresh the list.
+final FutureProvider<List<Item>> itemsListProvider =
+    FutureProvider.autoDispose<List<Item>>((ref) async {
+  final result = await ref.read(itemsClientProvider).listItems();
+  return result.items;
+});
+
+/// Landing screen, rendered inside AppShell (see
+/// router/app_shell.dart for the shared app bar). Below
+/// the status line, a simple list backed by the example `items` domain
+/// demonstrates a full read/write round-trip.
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            const Icon(Icons.check_circle_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              'No Auth App',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            Expanded(child: _ItemsSection()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// EXAMPLE: lists items and adds new ones. Delete with the `items` domain.
+class _ItemsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(itemsListProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text('Items', style: Theme.of(context).textTheme.titleSmall),
+        ),
+        Expanded(
+          child: items.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Failed to load items: $e')),
+            data: (list) => list.isEmpty
+                ? const Center(child: Text('No items yet. Add one below.'))
+                : ListView(
+                    children: [
+                      for (final item in list)
+                        ListTile(
+                          leading: const Icon(Icons.label_outline),
+                          title: Text(item.name),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
+        _AddItemField(),
+      ],
+    );
+  }
+}
+
+class _AddItemField extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_AddItemField> createState() => _AddItemFieldState();
+}
+
+class _AddItemFieldState extends ConsumerState<_AddItemField> {
+  final _controller = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty) return;
+    setState(() => _saving = true);
+    try {
+      await ref
+          .read(itemsClientProvider)
+          .createItem(body: CreateItemRequest(name: name));
+      _controller.clear();
+      ref.invalidate(itemsListProvider);
+    } on Object catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not add item.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _controller,
+              decoration: const InputDecoration(
+                labelText: 'New item',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _add(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          IconButton.filled(
+            icon: _saving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add),
+            onPressed: _saving ? null : _add,
+          ),
+        ],
+      ),
+    );
+  }
+}

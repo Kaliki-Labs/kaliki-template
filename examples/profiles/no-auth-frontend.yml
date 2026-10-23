@@ -1,0 +1,22 @@
+# Profile: no-auth-frontend
+#
+# Frontend with auth=none: proves the Flutter app generates and analyzes cleanly
+# when no auth screens, controller, token storage or interceptor are wired in.
+meta:
+  title: "No-auth frontend"
+  purpose: "Flutter app with auth=none and the example domain on."
+  guards:
+    - "auth=none file set on the frontend (no login/signup/OTP screens, auth_controller, token_storage)"
+    - "no flutter_secure_storage dependency, plain Dio without the auth interceptor"
+    - "include_frontend=true with include_example_domain=true (home screen shows the items list)"
+  validates: [flutter analyze]
+
+answers:
+  project_name: "No Auth App"
+  include_frontend: true
+  include_example_domain: true
+  auth: none
+  eventing: none
+  payments: none
+  push_notifications: none
+  object_storage: none
