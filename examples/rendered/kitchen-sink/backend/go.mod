@@ -14,3 +14,9 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+// Architecture model, checks, queries and Explorer: `go tool archmodel ...`
+// (see the `arch*` targets in the root Makefile and architecture.yaml).
+require github.com/Kaliki-Labs/archmodel v0.0.0-20261023151046-9b8152991f34
+
+tool github.com/Kaliki-Labs/archmodel/cmd/archmodel

@@ -1,0 +1,14 @@
+# Architecture policy for `go tool archmodel` (pinned in backend/go.mod).
+#
+# archmodel already knows this template's conventions: Modules under
+# backend/internal/* and backend/cmd/*, a Module is a Domain when
+# api/services/<name>.yaml exists, Composition roots (server, cmd/*, migrate),
+# Foundation (config, database), and the Rationale for every rule. This file
+# is merged over those defaults (maps merge, lists and scalars replace,
+# unknown keys are an error), so it holds only what is NOT a convention.
+# Reference: https://github.com/Kaliki-Labs/archmodel/blob/main/docs/architecture.example.yaml
+version: 1
+
+# Make Explorer source references clickable (`make arch REF=main`):
+# source:
+#   url_template: "https://github.com/ORG/REPO/blob/{ref}/{path}#L{line}"

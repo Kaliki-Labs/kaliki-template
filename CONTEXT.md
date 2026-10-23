@@ -25,3 +25,21 @@ Per-operation `x-rate-limit` rules are always active (explicit, spec-declared, r
 **Operation identification at request time** — oapi-codegen's gin-server mode exposes no operation ID on the request context by default. The codegen templates are customized (two small template overrides: route registration and per-operation wrappers) so each generated wrapper stashes its operation ID via `c.Set(ratelimit.OperationIDKey, "{{$opid}}")`, and a generated `rateLimitRules map[string]ratelimit.Rule` (built from each operation's `x-rate-limit`) is looked up by that ID — mirroring how `BearerAuthScopes` is already stashed per-operation for auth.
 
 **OTP attempt limiting** (#14) — a separate mechanism from the above: a Postgres `attempts INT DEFAULT 0` column with an atomic `WHERE attempts < 5` increment, scoped to a single OTP row's lifetime. Not a token bucket, not Redis-backed — a per-resource invariant, not a general rate limiter.
+
+## Architecture tooling (#32)
+
+**Architecture model** — a machine-readable description of a generated project's structure: its modules, the dependencies between them, and the API operations, schemas and tables each one owns. Extracted from the code, never hand-written. It is the single source that both the Explorer and the Guardrails read, so what a human sees and what an agent is held to cannot drift apart.
+
+**Explorer** — the human-facing view of the Architecture model: navigate, drill down, and understand. Never enforces anything.
+
+**Guardrails** — the agent-facing side of the Architecture model, made of two parts: *checks* (rules that fail with a fix hint) and *queries* (questions an agent asks the model instead of grepping, e.g. "who depends on `auth`?"). Distinct from the existing per-file fitness checks, which don't need the model.
+
+**Module** — any unit that shows up as a node in the Architecture model. There are two kinds:
+- **Domain** — a business capability treated as a vertical slice: its OpenAPI spec, backend package, tables, generated client calls and frontend feature, all under one node (e.g. `auth`, `items`).
+- **Infrastructure module** — a supporting module that isn't a business capability (e.g. `ratelimit`, `mail`, `config`). Can be drilled into exactly like a Domain; it just owns no API operations of its own.
+
+**Module card** — the summary shown for a Module at any zoom level: its purpose, public surface, what it depends on, what depends on it, and what it owns (operations, tables, events).
+
+**Zoom level** — how far the Explorer has drilled in: system → Modules → a Module's internals → individual types/functions. Each level shows only what's relevant at that depth.
+
+**Architecture diff** — the change a branch makes to the Architecture model compared with its base: modules, dependencies, operations and tables added or removed, plus any new rule violations. The main artifact for reviewing agent-written PRs.

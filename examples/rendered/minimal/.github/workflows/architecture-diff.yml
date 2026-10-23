@@ -1,0 +1,52 @@
+# Posts the Architecture diff (what this PR changes about modules, their
+# dependencies, API operations and tables, plus new rule violations) as one
+# sticky PR comment, and uploads the diff-mode Explorer as an artifact. Never
+# fails the build: `make check` (the fitness job in ci.yml) enforces the rules.
+#
+# The comment is text plus a folded Mermaid diagram, with no image:
+# GITHUB_TOKEN can't upload attachments. The image comes from whoever works on
+# the PR (usually the agent), via `make arch-pr`, which attaches it as that
+# user. See archmodel ADR 0011.
+name: architecture-diff
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # sticky comment
+
+concurrency:
+  group: architecture-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  diff:
+    # Fork PRs get a read-only token, so the comment can't be posted.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Architecture diff
+        env:
+          ARCH_NO_IMAGE: "1"
+        run: bash scripts/arch-diff.sh "origin/${{ github.base_ref }}"
+
+      - uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: archmodel-diff-ci
+          path: .archmodel/diff.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-explorer-diff
+          path: |
+            .archmodel/explorer-diff.html
+            .archmodel/diff.json
+          if-no-files-found: ignore
