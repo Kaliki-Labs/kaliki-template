@@ -41,6 +41,10 @@ The API enables CORS for browser clients. In development (`APP_ENV` unset or not
 `production`) it reflects any `Origin`, so the frontend works with no setup. In
 production set `CORS_ALLOWED_ORIGINS` to a comma-separated allowlist.
 
+## Deploying
+
+See [`docs/deploying.md`](docs/deploying.md) for the container contract and first-deploy pitfalls.
+
 ## Fitness checks
 
 `fitness_checks/` enforces cyclomatic complexity, file/line-count limits and

@@ -1,0 +1,49 @@
+# Deploying
+
+Target-agnostic notes on what this project expects from wherever you run it, and
+traps that are easy to hit on a first real deploy. The template ships no
+infrastructure code; bring your own host, registry and provisioning.
+
+## The container contract
+
+- **Image:** `backend/Dockerfile` produces a static binary on
+  `gcr.io/distroless/static-debian12:nonroot`. It runs as a non-root user with
+  no shell and **no writable `$HOME`**. If you add anything that needs a cache
+  or config dir (fonts, headless browsers, tooling), set its env var to a path
+  you create and `chown` in the Dockerfile.
+- **Config:** everything is overridable by environment variable
+  (`backend/internal/config`). `backend/config/env.yaml` is dev-only and is
+  excluded from the image by `backend/.dockerignore`; don't copy secrets into
+  the image. Set `APP_ENV=production` and `CORS_ALLOWED_ORIGINS` (see README).
+- **Migrations:** run automatically at backend startup from `/app/sql/schema`.
+- **Credentials:** no static cloud keys are required. AWS clients use the default
+  credential chain, so prefer an instance/task role or OIDC over long-lived
+  keys.
+- **Tracing:** exports are a no-op until `OTEL_EXPORTER_OTLP_ENDPOINT` (or
+  `observability.endpoint`) points at a real collector.
+
+## Pitfalls
+
+### Keep one region everywhere
+Region values often feed more than one client (S3, SES, an OTel X-Ray exporter,
+aws-cli sidecars), so one wrong value fails in several places. Define it once
+per environment and derive the rest from it.
+
+### Container DNS on systemd-resolved hosts
+When the host's `/etc/resolv.conf` points at `127.0.0.53`, Docker's embedded DNS
+can fail every external lookup with
+`lookup <host> on 127.0.0.11:53: server misbehaving`. Set `dns:` on the affected
+service, or `{"dns": [...]}` in the Docker daemon config (which restarts every
+container on that host).
+
+### Floating image tags vs. immutable registries
+Re-pushing a tag such as `<branch>-latest` is rejected by registries configured
+as immutable (ECR `IMMUTABLE`). Use mutable tags for floating tags, or publish
+only unique tags.
+
+### GitHub OIDC subject claims
+Repositories created after 2026-07-15 get immutable subject claims
+(`repo:<org>@<org_id>/<repo>@<repo_id>:...`) instead of
+`repo:<org>/<repo>:...`. A cloud trust policy written for the classic format
+silently never matches (AWS: `AssumeRoleWithWebIdentity` → "Not authorized").
+Check the real value under Settings → Actions → General.
