@@ -43,9 +43,30 @@ production set `CORS_ALLOWED_ORIGINS` to a comma-separated allowlist.
 
 ## Fitness checks
 
-`fitness_checks/` enforces cyclomatic complexity and file/line-count limits
-and runs in CI on every push. Run `make hooks` once per clone to enable a
+`fitness_checks/` enforces cyclomatic complexity, file/line-count limits and
+the architecture rules (below), and runs in CI on every push. Run `make hooks` once per clone to enable a
 local pre-push hook that runs the same checks (`make check`) before each
 push; set `SKIP_CHECK=1 git push` to bypass it for a throwaway push.
+
+## Architecture
+
+[archmodel](https://github.com/Kaliki-Labs/archmodel), pinned in
+`backend/go.mod`, extracts an Architecture model (modules, their dependencies,
+the API operations, schemas and tables each owns, coupling and CRAP metrics)
+and checks it against `architecture.yaml`:
+
+```sh
+make arch          # write .archmodel/explorer.html: drill-down Explorer, one offline file
+make arch-serve    # live Explorer; ARCH_ADDR=<tailnet-ip>:7878 to open it from a phone
+make arch-check    # dependency rules, with the why and a fix hint (part of make check)
+make arch-diff     # this branch vs BASE=main: Markdown + image + diff-mode Explorer
+make arch-pr       # post that diff, image included, on this branch's PR (as you, via gh)
+cd backend && go tool archmodel query module auth   # JSON answers, for agents
+```
+
+Every PR gets a sticky comment with the Architecture diff as text plus Mermaid
+(non-blocking; `.github/workflows/architecture-diff.yml`). CI can't attach
+images, because `GITHUB_TOKEN` can't upload them, so the image comes from `make arch-pr`,
+which agents run after pushing.
 
 See `TEMPLATE_NOTES.md` for how to add a domain and remove the example.

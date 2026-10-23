@@ -118,6 +118,25 @@ traces DB queries. Local compose files start Jaeger (UI on
 the global tracer provider exports via OTLP (insecure; front it with a collector
 or add TLS for production). Spans flush on graceful shutdown.
 
+## Architecture rules
+
+`make arch-check` (part of `make check`) enforces, from the Architecture model:
+
+- **Levels, inward only**: Composition root (`server`, `cmd/*`, `migrate`) →
+  Domains → Infrastructure modules → Foundation (`config`, `database`).
+- **A Domain never imports another Domain.** A module is a Domain because
+  `api/services/<name>.yaml` exists, so `new-domain` needs no extra wiring. If
+  a Domain needs another, declare an interface in the consumer and wire it in
+  `internal/server`.
+- Nothing imports the Composition root; test-only modules (`testsupport`) stay
+  out of production code; every package has a doc comment.
+
+Coupling (Ca, Ce, Instability, Abstractness, Distance) and CRAP metrics are
+shown on Module cards in the Explorer but not enforced. `architecture.yaml`
+holds only what isn't a convention (e.g. `outbox.sql` belongs to `events`);
+override kinds there if a module's classification is wrong. Bump the tool with
+`cd backend && go get -tool github.com/Kaliki-Labs/archmodel/cmd/archmodel@latest`.
+
 ## Migrations
 
 Schema migrations are goose files in `backend/sql/schema/` (`-- +goose Up` /

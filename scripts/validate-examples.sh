@@ -42,7 +42,7 @@ for name in "${profiles[@]}"; do
     docker compose -p "$project" -f "$compose" up -d --wait
   fi
 
-  ( cd "$work/backend" && go build ./... && go vet ./... && go test ./... )
+  ( cd "$work/backend" && go build ./... && go vet ./... && go test ./... && go tool archmodel check )
 
   if [ "$(has_frontend "$src")" = "True" ]; then
     # copier's own _tasks already bootstrapped the frontend + shared_api_client

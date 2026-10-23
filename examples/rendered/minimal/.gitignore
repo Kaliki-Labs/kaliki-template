@@ -22,3 +22,6 @@ build/
 # frontend/ and packages/shared_api_client/ are members of one Dart pub
 # workspace: there's a single pubspec.lock at the project root (not one per
 # package) and it's committed, same as any application's lockfile.
+
+# Architecture model + Explorer output (`make arch`, `go tool archmodel build`)
+.archmodel/
