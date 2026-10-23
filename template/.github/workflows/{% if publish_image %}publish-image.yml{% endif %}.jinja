@@ -1,3 +1,4 @@
+{% raw %}
 name: publish-image
 
 # Builds the backend image and pushes it to a container registry. No cloud
@@ -79,3 +80,4 @@ jobs:
           tags: ${{ steps.tags.outputs.list }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+{% endraw %}
