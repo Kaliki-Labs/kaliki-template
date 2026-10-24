@@ -1,4 +1,4 @@
-# Posts the Architecture diff (what this PR changes about modules, their
+{% raw %}# Posts the Architecture diff (what this PR changes about modules, their
 # dependencies, API operations and tables, plus new rule violations) as one
 # sticky PR comment, and uploads the diff-mode Explorer as an artifact. Never
 # fails the build: `make check` (the fitness job in ci.yml) enforces the rules.
@@ -24,8 +24,8 @@ jobs:
   diff:
     # Fork PRs get a read-only token, so the comment can't be posted.
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
+{% endraw %}    runs-on: {{ blacksmith_runner if ci_runner == 'blacksmith' else 'ubuntu-latest' }}
+{% raw %}    steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -50,3 +50,4 @@ jobs:
             .archmodel/explorer-diff.html
             .archmodel/diff.json
           if-no-files-found: ignore
+{% endraw %}

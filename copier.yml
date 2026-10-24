@@ -207,6 +207,20 @@ publish_image:
   help: Add a CI workflow that builds the backend image and pushes it to a container registry
   default: false
 
+ci_runner:
+  type: str
+  help: Runner for the generated GitHub Actions workflows
+  choices:
+    "GitHub-hosted (ubuntu-latest)": github
+    "Blacksmith (needs a Blacksmith account on your GitHub org)": blacksmith
+  default: github
+
+blacksmith_runner:
+  type: str
+  help: Blacksmith runner label (see https://docs.blacksmith.sh/blacksmith-runners/overview)
+  default: blacksmith-4vcpu-ubuntu-2404
+  when: "{{ ci_runner == 'blacksmith' }}"
+
 # A shared UI design-system package is intentionally NOT scaffolded. The
 # frontend ships a handful of local widgets in frontend/lib/widgets; extract a
 # real shared_ui package into its own repo once a second app needs it.

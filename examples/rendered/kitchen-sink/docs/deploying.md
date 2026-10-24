@@ -54,3 +54,24 @@ Outside `us-east-1`, `CreateBucket` without a location constraint fails with
 `IllegalLocationConstraintException` before it ever reports "already exists".
 `internal/storage` does not create buckets. If you add that for a local store
 (MinIO, RustFS), gate it on a custom `S3_ENDPOINT` being set.
+
+## CI on Blacksmith
+
+Workflows run on `blacksmith-4vcpu-ubuntu-2404` runners. Install the Blacksmith
+GitHub App on your org first, or jobs will queue forever.
+
+- **Dependency caches are automatic.** `actions/setup-go`, `actions/setup-node`
+  and `actions/cache` are redirected to Blacksmith's colocated cache with no
+  workflow change. Keep the upstream actions; do not swap in the archived
+  `useblacksmith/setup-*` forks.
+- **Docker service images are cached automatically** (e.g. the `postgres`
+  service in the `backend` job).
+- **Image builds** use `useblacksmith/setup-docker-builder` +
+  `useblacksmith/build-push-action`, which keep BuildKit layers on a disk
+  attached to the runner instead of exporting to the GHA cache.
+- **Go build cache (dashboard toggle, not in the repo).** Enable
+  *Settings -> Features -> Caching -> Go build cache* for your Blacksmith org
+  (needs Go 1.24+). Leave test-result caching off for the `backend` job: its
+  tests hit a real Postgres, so cached results would be wrong.
+- Optional: `useblacksmith/checkout` instead of `actions/checkout` caches the
+  git checkout; only worth it for large repos.

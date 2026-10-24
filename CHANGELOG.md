@@ -5,6 +5,13 @@ Versions are git tags; `copier update` upgrades a generated project between them
 ## Unreleased
 
 ### Added
+- **Blacksmith CI runners (#18).** New `ci_runner` question (`github` default,
+  or `blacksmith`) plus `blacksmith_runner` (default
+  `blacksmith-4vcpu-ubuntu-2404`). Switches `ci.yml`, `architecture-diff.yml`
+  and `publish-image.yml` to Blacksmith runners; upstream setup actions keep
+  working with Blacksmith's automatic cache, and `publish-image` uses
+  Blacksmith's Docker builder instead of the GHA cache. `docs/deploying.md`
+  lists the dashboard-only toggles (Go build cache).
 - **Deployment notes and optional image publishing (#37, #38).** Generated
   projects get `docs/deploying.md` (container contract and first-deploy
   pitfalls). New `publish_image` question (default off) adds
