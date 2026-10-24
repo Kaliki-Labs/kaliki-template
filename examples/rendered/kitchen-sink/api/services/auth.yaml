@@ -27,6 +27,8 @@ paths:
                 $ref: "#/components/schemas/SignupResponse"
         "409":
           description: Email already registered
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /auth/login:
     post:
       operationId: login
@@ -52,6 +54,8 @@ paths:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
           description: Invalid credentials
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /auth/refresh:
     post:
       operationId: refreshToken
@@ -131,6 +135,8 @@ paths:
                 $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Invalid or expired token
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /auth/password-reset/request:
     post:
       operationId: requestPasswordReset
@@ -162,6 +168,17 @@ paths:
         "400":
           description: Invalid or expired token
 components:
+  responses:
+    TooManyRequests:
+      description: >-
+        Rate limit exceeded. Retry after the number of seconds in the
+        Retry-After header.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            minimum: 0
   securitySchemes:
     bearerAuth:
       type: http

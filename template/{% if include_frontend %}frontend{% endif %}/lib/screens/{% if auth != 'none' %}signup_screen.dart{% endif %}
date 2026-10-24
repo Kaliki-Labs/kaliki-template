@@ -50,8 +50,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ref.listen(authControllerProvider, (_, next) {
       if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sign up failed. Try a different email.'),
+          SnackBar(
+            content: Text(
+              authErrorMessage(
+                next.error,
+                'Sign up failed. Try a different email.',
+              ),
+            ),
           ),
         );
       }

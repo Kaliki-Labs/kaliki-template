@@ -1,9 +1,33 @@
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_api_client/export.dart';
 
 import '../api/rest_client_provider.dart';
 
 part 'auth_controller.g.dart';
+
+/// Cooldown assumed when a 429 arrives without a usable `Retry-After` header;
+/// matches the default `x-rate-limit` window in api/services/auth.yaml.
+const defaultRetryAfter = Duration(seconds: 60);
+
+/// The wait requested by a 429 from a rate-limited auth endpoint, read from the
+/// `Retry-After` header. Null when [error] is not a 429.
+Duration? retryAfterOf(Object? error) {
+  if (error is! DioException || error.response?.statusCode != 429) return null;
+  final header = error.response?.headers.value('retry-after');
+  final seconds = int.tryParse(header ?? '');
+  return seconds == null ? defaultRetryAfter : Duration(seconds: seconds);
+}
+
+/// A user-facing message for [error]: a throttling notice for a 429, otherwise
+/// [fallback].
+String authErrorMessage(Object? error, String fallback) {
+  final wait = retryAfterOf(error);
+  if (wait == null) return fallback;
+  final seconds = wait.inSeconds < 1 ? 1 : wait.inSeconds;
+  return 'Too many attempts. Try again in $seconds '
+      '${seconds == 1 ? 'second' : 'seconds'}.';
+}
 
 /// Holds the authenticated [User] (or null when signed out). On startup it
 /// tries to load the current user from a persisted token.
