@@ -4,6 +4,8 @@ Versions are git tags; `copier update` upgrades a generated project between them
 
 ## Unreleased
 
+## v2.0.0 - 2026-10-24
+
 ### Added
 - **Blacksmith CI runners (#18).** New `ci_runner` question (`github` default,
   or `blacksmith`) plus `blacksmith_runner` (default
