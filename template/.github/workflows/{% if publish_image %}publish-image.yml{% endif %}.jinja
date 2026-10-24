@@ -75,7 +75,9 @@ jobs:
           image="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
           echo "list=${image}:${branch}-${GITHUB_SHA::7},${image}:${branch}-latest" >> "$GITHUB_OUTPUT"
 
-{% endraw %}{% if ci_runner == 'blacksmith' %}      - uses: useblacksmith/setup-docker-builder@v1
+{% endraw %}{% if ci_runner == 'blacksmith' %}      - uses: useblacksmith/setup-docker-builder@v2
+        with:
+          cache-key: backend/Dockerfile # one key per unrelated image
 
       - uses: useblacksmith/build-push-action@v2
         with:

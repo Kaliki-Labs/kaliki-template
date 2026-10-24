@@ -67,11 +67,16 @@ GitHub App on your org first, or jobs will queue forever.
 - **Docker service images are cached automatically** (e.g. the `postgres`
   service in the `backend` job).
 - **Image builds** use `useblacksmith/setup-docker-builder` +
-  `useblacksmith/build-push-action`, which keep BuildKit layers on a disk
-  attached to the runner instead of exporting to the GHA cache.
+  `useblacksmith/build-push-action` (v2), which keep BuildKit layers on a disk
+  attached to the runner instead of exporting to the GHA cache. Don't add
+  `cache-from`/`cache-to`. `cache-key` is required; use one key per unrelated
+  image. Multi-platform: use native `-arm` runners in a matrix, not QEMU.
 - **Go build cache (dashboard toggle, not in the repo).** Enable
   *Settings -> Features -> Caching -> Go build cache* for your Blacksmith org
-  (needs Go 1.24+). Leave test-result caching off for the `backend` job: its
-  tests hit a real Postgres, so cached results would be wrong.
+  (needs Go 1.24+; on by default for new orgs). Once on, it replaces the
+  Go cache that `actions/setup-go` keeps; set `cache: false` on `setup-go` to
+  skip the redundant download. Test-result caching is an org-wide opt-in:
+  the `backend` job sets `BLACKSMITH_GOCACHEPROG_DISABLE_TEST_SHARING=1`
+  because its tests hit a real Postgres.
 - Optional: `useblacksmith/checkout` instead of `actions/checkout` caches the
   git checkout; only worth it for large repos.
