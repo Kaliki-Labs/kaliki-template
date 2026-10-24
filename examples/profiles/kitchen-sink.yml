@@ -10,6 +10,7 @@ meta:
   guards:
     - "auth=jwt-full + verification_method=token (link path, complements jwt-full-otp)"
     - "eventing=kafka-redpanda, payments=razorpay, push=firebase, object_storage=s3 wired together"
+    - "ci_runner=blacksmith renders Blacksmith runners and the Blacksmith docker builder in publish-image.yml"
     - "publish_image=true renders .github/workflows/publish-image.yml alongside everything else"
     - "all docker-compose services compose without port/config collisions"
   validates:
@@ -26,3 +27,4 @@ answers:
   push_notifications: firebase
   object_storage: s3
   publish_image: true
+  ci_runner: blacksmith

@@ -7,7 +7,7 @@ on:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     services:
       postgres:
         image: postgres:17-alpine
@@ -21,12 +21,15 @@ jobs:
           --health-cmd "pg_isready -U test_user -d test_db"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      # Tests use a real Postgres, so never serve cached test results.
+      BLACKSMITH_GOCACHEPROG_DISABLE_TEST_SHARING: "1"
       TEST_DATABASE_URL: postgres://test_user:test_password@localhost:25432/test_db?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.26"
+          cache: false # Blacksmith's Go build cache replaces setup-go's
       - name: Build + test
         working-directory: backend
         run: |
@@ -34,10 +37,10 @@ jobs:
           go test ./...
 
   api:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Build combined spec
@@ -47,9 +50,9 @@ jobs:
           npm run build:local
 
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -60,12 +63,13 @@ jobs:
           flutter analyze
 
   fitness:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.26"
+          cache: false # Blacksmith's Go build cache replaces setup-go's
       - run: go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
       - name: Run fitness checks
         run: bash fitness_checks/run_all.sh

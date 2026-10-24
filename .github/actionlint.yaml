@@ -1,0 +1,4 @@
+# Blacksmith runner labels used by the ci_runner=blacksmith rendering.
+self-hosted-runner:
+  labels:
+    - blacksmith-*

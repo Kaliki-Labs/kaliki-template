@@ -6,12 +6,12 @@ Curated renderings of the template. Each profile is an answer set that guards a 
 
 ## Coverage matrix
 
-| profile | frontend | example | auth | verify | eventing | payments | push | storage | publish_image |
-|---|---|---|---|---|---|---|---|---|---|
-| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | · | · | · | · | · |
-| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | kafka-redpanda | razorpay | firebase | s3 | ✓ |
-| [`minimal`](#minimal) | · | · | · | · | · | · | · | · | · |
-| [`no-auth-frontend`](#no-auth-frontend) | ✓ | ✓ | · | · | · | · | · | · | · |
+| profile | frontend | example | auth | verify | eventing | payments | push | storage | ci_runner | publish_image |
+|---|---|---|---|---|---|---|---|---|---|---|
+| [`jwt-full-otp`](#jwt-full-otp) | ✓ | ✓ | jwt | otp | · | · | · | · | · | · |
+| [`kitchen-sink`](#kitchen-sink) | ✓ | ✓ | jwt | token | kafka-redpanda | razorpay | firebase | s3 | blacksmith | ✓ |
+| [`minimal`](#minimal) | · | · | · | · | · | · | · | · | · | · |
+| [`no-auth-frontend`](#no-auth-frontend) | ✓ | ✓ | · | · | · | · | · | · | · | · |
 
 Legend: `✓` enabled · `·` off/none · otherwise the chosen value.
 
@@ -38,6 +38,7 @@ Snapshot: [`examples/rendered/jwt-full-otp/`](rendered/jwt-full-otp)
 Guards:
 - auth=jwt-full + verification_method=token (link path, complements jwt-full-otp)
 - eventing=kafka-redpanda, payments=razorpay, push=firebase, object_storage=s3 wired together
+- ci_runner=blacksmith renders Blacksmith runners and the Blacksmith docker builder in publish-image.yml
 - publish_image=true renders .github/workflows/publish-image.yml alongside everything else
 - all docker-compose services compose without port/config collisions
 

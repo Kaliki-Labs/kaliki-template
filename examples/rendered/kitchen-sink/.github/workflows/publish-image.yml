@@ -11,6 +11,10 @@ name: publish-image
 # For ECR with GitHub OIDC (no static keys) replace the "Log in" step with the
 # commented aws-actions block below.
 #
+# Runs on Blacksmith: the image is built with useblacksmith/setup-docker-builder,
+# which keeps the BuildKit cache on a disk attached to the runner (no GHA cache
+# export/import).
+#
 # Tags: <branch>-<short_sha> (immutable-friendly) and <branch>-latest (floating).
 # The floating tag is re-pushed on every build, so the registry repository must
 # allow mutable tags. ECR repositories created with image_tag_mutability =
@@ -35,9 +39,9 @@ env:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log in (ghcr.io)
         if: ${{ env.REGISTRY == 'ghcr.io' }}
@@ -70,13 +74,13 @@ jobs:
           image="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
           echo "list=${image}:${branch}-${GITHUB_SHA::7},${image}:${branch}-latest" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: useblacksmith/setup-docker-builder@v2
+        with:
+          cache-key: backend/Dockerfile # one key per unrelated image
 
-      - uses: docker/build-push-action@v6
+      - uses: useblacksmith/build-push-action@v2
         with:
           context: backend
           push: true
           tags: ${{ steps.tags.outputs.list }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
