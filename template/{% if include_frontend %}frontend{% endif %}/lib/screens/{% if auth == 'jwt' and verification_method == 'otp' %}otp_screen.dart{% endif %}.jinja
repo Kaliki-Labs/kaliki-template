@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,9 +18,12 @@ class OtpScreen extends ConsumerStatefulWidget {
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _code = TextEditingController();
+  Timer? _ticker;
+  int _cooldown = 0;
 
   @override
   void dispose() {
+    _ticker?.cancel();
     _code.dispose();
     super.dispose();
   }
@@ -29,6 +34,32 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         .verifyOtp(_code.text.trim());
   }
 
+  void _startCooldown(Duration wait) {
+    _ticker?.cancel();
+    setState(() => _cooldown = wait.inSeconds < 1 ? 1 : wait.inSeconds);
+    _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() => _cooldown--);
+      if (_cooldown <= 0) timer.cancel();
+    });
+  }
+
+  Future<void> _resend() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(authControllerProvider.notifier).resendOtp();
+      messenger.showSnackBar(const SnackBar(content: Text('Code sent.')));
+      _startCooldown(defaultRetryAfter);
+    } on Object catch (e) {
+      final wait = retryAfterOf(e);
+      if (wait != null) _startCooldown(wait);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(authErrorMessage(e, 'Could not resend the code.')),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authControllerProvider);
@@ -37,7 +68,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     ref.listen(authControllerProvider, (_, next) {
       if (next.hasError && !next.isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid or expired code. Try again.')),
+          SnackBar(
+            content: Text(
+              authErrorMessage(
+                next.error,
+                'Invalid or expired code. Try again.',
+              ),
+            ),
+          ),
         );
       }
     });
@@ -71,6 +109,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 onPressed: _submit,
               ),
               const SizedBox(height: 12),
+              TextButton(
+                onPressed: _cooldown > 0 || pending == null ? null : _resend,
+                child: Text(
+                  _cooldown > 0
+                      ? 'Resend code in ${_cooldown}s'
+                      : 'Resend code',
+                ),
+              ),
               TextButton(
                 onPressed: () {
                   ref

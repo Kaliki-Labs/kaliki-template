@@ -1,9 +1,33 @@
+import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_api_client/export.dart';
 
 import '../api/rest_client_provider.dart';
 
 part 'auth_controller.g.dart';
+
+/// Cooldown assumed when a 429 arrives without a usable `Retry-After` header;
+/// matches the default `x-rate-limit` window in api/services/auth.yaml.
+const defaultRetryAfter = Duration(seconds: 60);
+
+/// The wait requested by a 429 from a rate-limited auth endpoint, read from the
+/// `Retry-After` header. Null when [error] is not a 429.
+Duration? retryAfterOf(Object? error) {
+  if (error is! DioException || error.response?.statusCode != 429) return null;
+  final header = error.response?.headers.value('retry-after');
+  final seconds = int.tryParse(header ?? '');
+  return seconds == null ? defaultRetryAfter : Duration(seconds: seconds);
+}
+
+/// A user-facing message for [error]: a throttling notice for a 429, otherwise
+/// [fallback].
+String authErrorMessage(Object? error, String fallback) {
+  final wait = retryAfterOf(error);
+  if (wait == null) return fallback;
+  final seconds = wait.inSeconds < 1 ? 1 : wait.inSeconds;
+  return 'Too many attempts. Try again in $seconds '
+      '${seconds == 1 ? 'second' : 'seconds'}.';
+}
 
 /// A signup awaiting OTP verification: the email plus the short-lived token
 /// returned by /auth/signup, submitted together with the emailed code.
@@ -76,6 +100,19 @@ class AuthController extends _$AuthController {
       ref.read(pendingVerificationControllerProvider.notifier).clear();
       return session.user;
     });
+  }
+
+  /// Requests a fresh OTP for the pending signup. Throws on failure (including
+  /// a 429, see [retryAfterOf]) without touching the auth state, so the OTP
+  /// screen can show a cooldown instead of an error.
+  Future<void> resendOtp() async {
+    final pending = ref.read(pendingVerificationControllerProvider);
+    if (pending == null) return;
+    final resp = await ref.read(authClientProvider).resendVerification(
+          body: ResendVerificationRequest(email: pending.email),
+        );
+    ref.read(pendingVerificationControllerProvider.notifier).value =
+        (email: pending.email, token: resp.verificationToken);
   }
 
   Future<void> logout() async {
