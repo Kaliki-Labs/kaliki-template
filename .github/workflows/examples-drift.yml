@@ -42,3 +42,10 @@ jobs:
             git --no-pager diff --stat
             exit 1
           fi
+
+      # Generated workflows are never executed here, so lint them: catches bad
+      # YAML, expressions and action inputs in every rendered profile.
+      - name: Lint rendered workflows
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color -config-file .github/actionlint.yaml examples/rendered/*/.github/workflows/*.yml
