@@ -4,6 +4,17 @@ Versions are git tags; `copier update` upgrades a generated project between them
 
 ## Unreleased
 
+## v2.0.1 - 2026-10-24
+
+### Added
+- **Redis in generated CI (#42).** `ci.yml` now starts a Redis service (port
+  26379) so the auth and rate-limit tests have the backing store they need.
+- **Rate-limit and OTP-resend support in the frontend (#43).** `auth.yaml`
+  declares a shared `TooManyRequests` (429) response with `Retry-After` on
+  rate-limited operations. The Flutter app gains `resendOtp()`, a Resend button
+  with a cooldown on the OTP screen, readable 429 messages on login/signup/OTP,
+  and a widget test. Only generated when `auth != none`.
+
 ## v2.0.0 - 2026-10-24
 
 ### Added
