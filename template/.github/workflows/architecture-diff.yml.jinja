@@ -26,13 +26,14 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
 {% endraw %}    runs-on: {{ blacksmith_runner if ci_runner == 'blacksmith' else 'ubuntu-latest' }}
 {% raw %}    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: backend/go.mod
-
+{% endraw %}{% if ci_runner == 'blacksmith' %}          cache: false # Blacksmith's Go build cache replaces setup-go's
+{% endif %}{% raw %}
       - name: Architecture diff
         env:
           ARCH_NO_IMAGE: "1"

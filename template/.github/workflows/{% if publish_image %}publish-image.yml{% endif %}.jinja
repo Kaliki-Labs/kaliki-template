@@ -42,7 +42,7 @@ jobs:
   publish:
 {% endraw %}    runs-on: {{ blacksmith_runner if ci_runner == 'blacksmith' else 'ubuntu-latest' }}
 {% raw %}    steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log in (ghcr.io)
         if: ${{ env.REGISTRY == 'ghcr.io' }}

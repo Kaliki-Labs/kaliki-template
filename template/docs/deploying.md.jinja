@@ -81,9 +81,9 @@ GitHub App on your org first, or jobs will queue forever.
 {%- endif %}
 - **Go build cache (dashboard toggle, not in the repo).** Enable
   *Settings -> Features -> Caching -> Go build cache* for your Blacksmith org
-  (needs Go 1.24+; on by default for new orgs). Once on, it replaces the
-  Go cache that `actions/setup-go` keeps; set `cache: false` on `setup-go` to
-  skip the redundant download. Test-result caching is an org-wide opt-in:
+  (needs Go 1.24+; on by default for new orgs). It replaces the
+  Go cache that `actions/setup-go` keeps, so the workflows set `cache: false`
+  on `setup-go`. If you turn the toggle off, remove those lines. Test-result caching is an org-wide opt-in:
   the `backend` job sets `BLACKSMITH_GOCACHEPROG_DISABLE_TEST_SHARING=1`
   because its tests hit a real Postgres.
 - Optional: `useblacksmith/checkout` instead of `actions/checkout` caches the
